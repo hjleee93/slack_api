@@ -1,4 +1,4 @@
-const MYSQL = require('mysql2/promise');
+const MYSQL = require('mysql2');
 import RDB, { IDbOption } from '../_base/rdb';
 import db_options from '../../../config/dbs';
 const mysqlOpt = db_options.mysql;

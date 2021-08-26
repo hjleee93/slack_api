@@ -22,7 +22,7 @@ class Redis {
         if ( this.redis ) {
             this.redis.hset('server:zempie', 'status', 'running');
             // this.setTimer();
-            logger.info('redis is ready.'.cyan);
+            logger.info('redis is ready.');
         }
 
         this.preloadCaches()

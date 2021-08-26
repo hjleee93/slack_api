@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import cfgOption from '../../config/opt';
 import * as jwt from 'jsonwebtoken';
-import { IZempieClaims } from '../controllers/_interfaces';
 import admin from 'firebase-admin';
 import DecodedIdToken = admin.auth.DecodedIdToken;
 import { CreateError, ErrorCodes } from './errorCodes';
@@ -81,14 +80,6 @@ export function verifyJWT(token: string): any {
 }
 
 
-export function updateZempieClaims(user: DecodedIdToken, claims: any) {
-    return admin.auth().setCustomUserClaims(user.uid, {
-        zempie: {
-            ...user.zempie,
-            ...claims,
-        }
-    } as IZempieClaims)
-}
 
 
 /**

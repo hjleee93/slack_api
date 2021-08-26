@@ -4,7 +4,7 @@ export default {
         username: 'dev',
         password: 'ftred103',
         conn: {
-            host: '192.168.0.10',
+            host: 'mysql',
             port: 3306,
             dialect: 'mysql',
             pool: {
@@ -27,7 +27,7 @@ export default {
         },
     },
     redis: {
-        host: '192.168.0.10',
+        host: 'mysql',
         port: 6379,
         family: 4,
         password: 'ftred103',

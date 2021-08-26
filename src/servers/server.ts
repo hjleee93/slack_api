@@ -1,4 +1,3 @@
-import * as _ from 'lodash';
 import * as express from 'express';
 import * as expressWs from 'express-ws';
 import * as bodyParser from 'body-parser';
@@ -6,59 +5,23 @@ import * as cors from 'cors';
 import * as path from 'path';
 import * as ejs from 'ejs';
 import * as ws from 'ws';
-import * as getPort from 'get-port';
 
 import { Request, Response, Router } from 'express';
 import {  } from 'express-ws'
 import { Sequelize } from 'sequelize';
 
-import * as admin from 'firebase-admin';
-import { firebase } from '../commons/globals';
 
 import MySql from '../database/mysql';
 import Redis from '../database/redis';
-import Mongo from '../database/mongodb';
 
 import { IMessageQueueOptions, IServerOptions } from '../commons/interfaces';
 import * as Pkg from '../../package.json';
 
-import { dbs } from '../commons/globals';
 import dbOptions from '../../config/dbs';
 
 import cfgOption from '../../config/opt';
+import {logger} from "../commons/logger";
 const { CORS } = cfgOption;
-
-import RpcController from '../controllers/rpcController';
-
-// graph-ql
-import { GraphQLSchema } from 'graphql';
-import * as graphqlHTTP from 'express-graphql';
-// const { generateSchema } = require('sequelize-graphql-schema')();
-
-// swagger
-import * as swaggerUi from 'swagger-ui-express'
-import swaggerDef from './swaggerDef';
-
-// colors
-import * as colors from 'colors';
-import { logger } from '../commons/logger';
-import Kafka from '../services/messageQueueService';
-import { adminTracking, getIdToken, validateAdminIdToken } from '../routes/_common';
-import { IncomingMessage } from 'http';
-import { verifyJWT } from '../commons/utils';
-
-colors.setTheme({
-    silly: 'rainbow',
-    input: 'grey',
-    verbose: 'cyan',
-    prompt: 'grey',
-    info: 'green',
-    data: 'grey',
-    help: 'cyan',
-    warn: 'yellow',
-    debug: 'blue',
-    error: 'red'
-});
 
 
 export default class Server {
@@ -90,13 +53,10 @@ export default class Server {
     public initialize2 = async (options: IServerOptions) => {
         this.options = options;
 
-        options.firebase && this.setFirebase();
         this.setExpress(options);
         options.rdb && await this.setRDB();
         options.mdb && await this.setMDB();
         options.ejs && this.setEJS();
-        options.swagger && this.setSwagger();
-        options.graphql && this.setGraphQL();
     }
 
 
@@ -109,91 +69,6 @@ export default class Server {
     }
 
 
-    protected setSwagger() {
-        if ( !!this.app && process.env.NODE_ENV !== 'production' ) {
-            const options = {
-                // explorer: true
-            };
-            this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDef, options));
-        }
-    }
-
-
-    protected setGraphQL() {
-        if ( !!this.app ) {
-            const models: any = {
-                Sequelize,
-                sequelize: this.db,
-            };
-            _.forEach(dbs, (db: any) => {
-                db.model.graphql = { queries: {} };
-                db.model.graphql.queries[`${db.name}Count`] = { resolver: (_: any, where: any) => Promise.resolve(db.model.count(where)) };
-                models[db.name] = db.model;
-            });
-            // models.Sequelize = Sequelize;
-
-            const options = {
-                authorizer: (source: any, args: any, context: IncomingMessage, info: any) => {
-                    try {
-                        // const idToken = getIdToken(context as Request);
-                        // const admin = verifyJWT(idToken)
-                        // if ( !admin ) {
-                        //
-                        // }
-
-                        return Promise.resolve();
-                    }
-                    catch (e) {
-                        return  Promise.reject(e);
-                    }
-                }
-            }
-            const { generateSchema } = require('sequelize-graphql-schema')(options);
-            const schema = generateSchema(models);
-            const hooker: any = (req: Request, res: Response, next: any) => {
-                if ( req.method.toUpperCase() !== 'GET' && req.body?.query?.includes('Post') ) {
-                    return adminTracking(req, res, next);
-                }
-                next();
-            };
-            this.app.use('/graphql', hooker, graphqlHTTP({
-                schema: new GraphQLSchema(schema),
-                graphiql: true
-            }));
-        }
-    }
-
-
-    protected setFirebase() {
-        let serviceAccount;
-        if ( process.env.NODE_ENV === 'production' ) {
-            serviceAccount = require('../../config/firebase/service-account.json');
-        }
-        else {
-            serviceAccount = require('../../config/firebase/zempie-dev-firebase-adminsdk-mt5jv-9e05cbc8f2.json');
-        }
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            // databaseURL: 'https://zempie.firebaseio.com'
-        });
-
-        firebase.admin = admin;
-    }
-
-
-    protected async setMessageQueue(options: IMessageQueueOptions) {
-        // await Producer.connect()
-        // await Consumer.connect(options.groupId, options.autoCommit, options.onMessage)
-        // Consumer.addTopic(options.addTopics);
-        await Kafka.initialize(options.groupId);
-        if ( options.addTopics ) {
-            await Kafka.addTopics(options.addTopics);
-        }
-        if ( options.addGateways ) {
-            await Kafka.addGateways(options.addGateways);
-        }
-        await Kafka.run(options.eachMessage);
-    }
 
 
 
@@ -208,7 +83,6 @@ export default class Server {
                 })
             }
 
-            this.app.use(cors({ credentials: true, origin: CORS.allowedOrigin }));
             this.app.use(bodyParser.json());
             this.app.use(bodyParser.urlencoded({ extended:false }));
 
@@ -270,7 +144,7 @@ export default class Server {
             }
 
             this.started_at = new Date();
-            logger.info(`[${process.env.NODE_ENV || 'local'}] Api Server [ver.${Pkg.version}] has started. (port: ${port})`.cyan.bold)
+            logger.info(`[${process.env.NODE_ENV || 'local'}] Api Server [ver.${Pkg.version}] has started. (port: ${port})`)
         };
 
         if ( !!this.app ) {

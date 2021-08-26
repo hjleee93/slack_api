@@ -23,10 +23,10 @@ class RDB {
             logging: msg => logger.debug(msg)
         });
 
-        await this.db.authenticate();
-        await this.syncDefine(dbOpt.conn?.dialect || 'mysql');
+        // await this.db.authenticate();
+        await this.syncDefine( 'mysql');
 
-        logger.info(`${dbOpt.conn?.dialect} is ready.`.cyan)
+        logger.info(`${dbOpt.conn?.dialect} is ready.`)
 
         return this.db;
     }
