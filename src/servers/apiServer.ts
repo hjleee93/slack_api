@@ -11,7 +11,6 @@ class ApiServer extends Server {
 
         this.setExpress(options);
         await this.setRDB();
-        await this.setMDB();
 
     }
 

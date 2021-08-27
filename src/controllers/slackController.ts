@@ -6,18 +6,16 @@ import slackConfig from '../../config/slack';
 
 import workController from './workTimeController'
 import meetingController from "./meetingController";
-
+import viewController from "./viewController";
 import workTimeController from "./workTimeController";
 import {dbs} from "../commons/globals";
 
-import { Op, Transaction } from 'sequelize';
 const qs = require('qs');
 
-const Booking = dbs.Booking;
-const Participant = dbs.Participant;
-
-
 class slackController {
+    private availTime = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    private bookingId: number = 0;
+    private time = viewController.time();
 
 
     event = async (req: any, res: any) => {
@@ -165,22 +163,28 @@ class slackController {
 
     actions = async (req: any, res: any) => {
 
-
         const {token, trigger_id, user, actions, type} = JSON.parse(req.body.payload);
 
         //modal submission
         if (type === 'view_submission') {
+
             const payload = JSON.parse(req.body.payload);
 
-            // if(actions && actions[0].action_id.match(/meeting_booking/)) {
+            const submitType = payload.view.submit.text
+            if (submitType === 'Edit') {
+                await meetingController.editBooking(payload.view, this.bookingId, user)
+            } else {
+                // if(actions && actions[0].action_id.match(/meeting_booking/)) {
 
-            await meetingController.createBooking(payload.view, user);
+                await meetingController.createBooking(payload.view, user);
 
-            // }else if(actions && actions[0].action_id.match(/meeting_edit/){
-            // await meetingController.editBooking(payload.view, user);
-            // }
-            // await this.closeModal(user)
+                // }else if(actions && actions[0].action_id.match(/meeting_edit/){
+                // await meetingController.editBooking(payload.view, user);
+                // }
+                // await this.closeModal(user)
 
+
+            }
             res.send({
                 "response_action": "update",
                 "view": {
@@ -189,27 +193,39 @@ class slackController {
                         "type": "plain_text",
                         "text": "Updated view"
                     },
+                    "close": {
+                        "type": "plain_text",
+                        "text": "닫기",
+                    },
                     "blocks": [
                         {
                             "type": "section",
                             "text": {
                                 "type": "plain_text",
-                                "text": "예약 완료됨"
+                                "text": `${submitType === 'Edit' ? '수정 완료' : '예약 완료됨'}`
                             }
                         }
                     ]
                 }
             })
+
         }
         if (actions && actions[0].action_id.match(/work_start/)) {
-            await workController.workStart(user, trigger_id)
+            try {
+                await workController.workStart(user, trigger_id)
+                res.sendStatus(200);
+            } catch (e) {
+                res.sendStatus(500);
+            }
+
+
         } else if (actions && actions[0].action_id.match(/work_end/)) {
             await workController.workEnd(user, trigger_id)
+            res.sendStatus(200);
         } else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
-            const result = await workController.workHistory(user, historyDuration, trigger_id)
+            const result = await workController.workHistory(user, historyDuration, trigger_id);
 
-            console.log(result)
             const history_block = [
                 {
 
@@ -283,6 +299,23 @@ class slackController {
 
                     ]
                 },
+
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": `${moment().subtract(historyDuration, 'days').format('yyyy-MM-DD')} ~ ${moment().format('yyyy-MM-DD')} 출퇴근 기록`,
+                        "emoji": true
+                    }
+                },
+
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*--------------------------------------------------------------------*\n          *날짜         |          출근 시간          |          퇴근 시간          *\n*--------------------------------------------------------------------*"
+                    }
+                },
                 ...result,
                 {
                     "type": "divider"
@@ -344,11 +377,14 @@ class slackController {
                 },
 
             ]
-            console.log(history_block)
+
             await this.displayHome(user.id, history_block)
+            res.sendStatus(200);
 
         } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
             await this.openModal(trigger_id);
+            // this.bookingId
+            res.sendStatus(200);
         } else if (actions && actions[0].action_id.match(/meeting_cancel/)) {
             const cancel_block = [
                 {
@@ -502,6 +538,7 @@ class slackController {
                 },
             ]
             await this.displayHome(user.id, cancel_block)
+            res.sendStatus(200);
         } else if (actions && actions[0].action_id.match(/meeting_list/)) {
             const clickedType = actions[0].value
             const result = await meetingController.meetingList(user, trigger_id, clickedType)
@@ -647,7 +684,7 @@ class slackController {
         } else if (actions && actions[0].action_id.match(/meeting_delete/)) {
             const booking_id = actions[0].value
             const result = await meetingController.deleteMeeting(booking_id, user, trigger_id)
-            if (result[0] === 1) {
+            if (result === 1) {
                 await workTimeController.openModal(trigger_id, '해당 예약은 삭제되었습니다.');
             }
 
@@ -790,6 +827,7 @@ class slackController {
 
             ]
             await this.displayHome(user.id, list_block)
+            res.sendStatus(200);
 
         } else if (actions && actions[0].action_id.match(/meeting_edit/)) {
             const booking_id = actions[0].value;
@@ -799,8 +837,20 @@ class slackController {
 
             await this.openEditModal(trigger_id, bookingInfo.dataValues);
 
-        }
+        } else if (actions && actions[0].action_id.match(/select_date/)) {
+            console.log(actions[0])
+            const selected_date = actions[0].selected_date;
+            const meetings = await dbs.Booking.hasBookingOnDate(selected_date);
 
+            console.log(meetings)
+
+            const times = _.map(meetings, (meeting: any) => {
+                console.log(meeting.start, meeting.end)
+
+            })
+
+
+        }
 
     }
 
@@ -833,8 +883,8 @@ class slackController {
     };
 
 
-    //todo:input error message
     openModal = async (trigger_id: any) => {
+
 
         const modal = {
             type: 'modal',
@@ -933,17 +983,18 @@ class slackController {
                 },
                 {
                     "type": "input",
-                    "element": {
-                        "type": "datepicker",
-                        // 1990-04-28"
-                        "initial_date": moment().format('yyyy-MM-DD'),
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select a date",
-                            "emoji": true
+                    "element":
+                        {
+                            "type": "datepicker",
+                            "initial_date": moment().format('yyyy-MM-DD'),
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "미팅 할 날짜",
+                                "emoji": true
+                            },
+                            "action_id": "select_date"
                         },
-                        "action_id": "date"
-                    },
+                    "dispatch_action": true,
                     "label": {
                         "type": "plain_text",
                         "text": "미팅 할 날짜",
@@ -963,14 +1014,7 @@ class slackController {
                             "options": [
 
 
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "09:00",
-                                        "emoji": true
-                                    },
-                                    "value": "09:00"
-                                }
+                                ...this.time
                             ],
                             "action_id": "start"
                         },
@@ -983,14 +1027,7 @@ class slackController {
                                 "emoji": true
                             },
                             "options": [
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "11:00",
-                                        "emoji": true
-                                    },
-                                    "value": "11:00"
-                                },
+                                ...this.time
 
                             ],
                             "action_id": "end"
@@ -1033,8 +1070,9 @@ class slackController {
 
     openEditModal = async (trigger_id: any, bookingInfo: any) => {
 
-        //todo: bookingInfo 값으로 id 가져오기
         //initial_users
+        const userIdList = await this.getUserId(bookingInfo.id);
+        this.bookingId = bookingInfo.id;
 
         const editModal = {
             type: 'modal',
@@ -1045,7 +1083,7 @@ class slackController {
             },
             "submit": {
                 "type": "plain_text",
-                "text": "Submit",
+                "text": "Edit",
                 "emoji": true
             },
             "close": {
@@ -1172,14 +1210,7 @@ class slackController {
                             },
                             "options": [
 
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "09:00",
-                                        "emoji": true
-                                    },
-                                    "value": "09:00"
-                                }
+                                ...this.time
                             ],
                             "initial_option": {
                                 "text": {
@@ -1200,14 +1231,7 @@ class slackController {
                                 "emoji": true
                             },
                             "options": [
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": "11:00",
-                                        "emoji": true
-                                    },
-                                    "value": "11:00"
-                                },
+                                ...this.time
 
                             ],
                             "initial_option": {
@@ -1232,7 +1256,8 @@ class slackController {
                             "text": "Select users",
                             "emoji": true
                         },
-                        "action_id": "participant_list"
+                        "action_id": "participant_list",
+                        initial_users: userIdList
                     },
                     "label": {
                         "type": "plain_text",
@@ -1253,9 +1278,9 @@ class slackController {
     }
 
 
-    sendDm = async(userList: string[], user: any, bookingInfo: any) =>{
+    sendDm = async (userList: string[], user: any, bookingInfo: any) => {
 
-        const blocks=[{
+        const blocks = [{
             "type": "section",
             "text": {
                 "type": "mrkdwn",
@@ -1263,7 +1288,7 @@ class slackController {
             }
         },
             {
-                "type": "section",
+                "type": "",
                 "text": {
                     "type": "mrkdwn",
                     "text": `*Topic:*\n${bookingInfo.title}\n*When:*\n${bookingInfo.date} ${bookingInfo.start} ~ ${bookingInfo.end}\n*회의실:* ${bookingInfo.room_number}\n*Details:* ${bookingInfo.description}`
@@ -1274,38 +1299,13 @@ class slackController {
                     "alt_text": "computer thumbnail"
                 }
             },
-            // {
-            //     "type": "actions",
-            //     "elements": [
-            //         {
-            //             "type": "button",
-            //             "text": {
-            //                 "type": "plain_text",
-            //                 "emoji": true,
-            //                 "text": "Approve"
-            //             },
-            //             "style": "primary",
-            //             "value": "click_me_123"
-            //         },
-            //         {
-            //             "type": "button",
-            //             "text": {
-            //                 "type": "plain_text",
-            //                 "emoji": true,
-            //                 "text": "Deny"
-            //             },
-            //             "style": "danger",
-            //             "value": "click_me_123"
-            //         }
-            //     ]
-            // }
-            ]
+        ]
         for (let i = 0; i < userList.length; i++) {
             const args = {
                 token: slackConfig.token,
                 channel: userList[i],
                 blocks: JSON.stringify(blocks),
-                text:'미팅 예약 메세지확인'
+                text: '미팅 예약 메세지확인'
             };
             console.log(args)
             const result = await axios.post('https://slack.com/api/chat.postMessage', qs.stringify(args));
@@ -1314,7 +1314,23 @@ class slackController {
         }
     }
 
+    getUserId = async (booking_id: string,) => {
+        const result = await dbs.Participant.findAll({booking_id: booking_id})
+
+        const userId = _.map(result, (user) => {
+            return user.dataValues.user_id
+        })
+
+        return userId
+
+    }
+
 
 }
+
+/* todo: res.sendStatus() 고치기
+        modal 빈값 에러처리
+        time 시작 종료값
+* */
 
 export default new slackController;

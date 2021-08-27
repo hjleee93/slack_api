@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 import * as moment from 'moment-timezone';
 import sequelize from 'sequelize';
 import fetch from "node-fetch"
-import { Op, Transaction } from 'sequelize';
+import {Op, Transaction} from 'sequelize';
 
 import axios from "axios";
 
@@ -10,9 +10,6 @@ import slackConfig from '../../config/slack';
 import {dbs} from "../commons/globals";
 
 const qs = require('qs');
-
-const SlackUser = dbs.SlackUser;
-const WorkLog = dbs.WorkLog;
 
 class workTimeController {
 
@@ -23,98 +20,71 @@ class workTimeController {
     }
 
     workStart = async (user: any, trigger_id: any) => {
-        const user_id = user.id;
-        const condition = user_id ? {where: {user_id: user_id}} : null;
+        return dbs.WorkLog.getTransaction(async (transaction: Transaction) => {
+            const user_id = user.id;
 
-        const userInfo = {
-            user_id,
-            user_name: user.username,
-        };
-
-        const workStart = {
-            user_id,
-            start: moment().format('YYYY-MM-DDTHH:mm:ss')
-        }
-        console.log(moment().format('yyyy-MM-DD').toString())
-
-        const isWorkStart = await WorkLog.findOne({
-            where: {
+            const userInfo = {
                 user_id,
-                start: {
-                    //범위
-                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
-                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
+                user_name: user.username,
+            };
+
+            const workStart = {
+                user_id,
+                start: moment().format('YYYY-MM-DDTHH:mm:ss')
+            }
+            console.log(moment().format('yyyy-MM-DD').toString())
+            const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id)
+
+
+            if (!isWorkStart) {
+                const user = await dbs.User.create(userInfo, transaction)
+
+                console.log('user', user)
+
+                if (!user) {
+                    // res.status(500).send('Create User for slack failure')
+                } else {
+                    const time = await dbs.WorkLog.create(workStart, transaction)
+
+                    if (!time) {
+                        // res.status(500).send(`Create WorkLog for ${userInfo.userName}  failure`)
+                    }
+                    await this.openModal(trigger_id, '출근 처리되었습니다.');
+
+
                 }
+            } else {
+                await this.openModal(trigger_id, '이미 출근처리되었습니다.');
             }
         })
-
-        console.log('userInfo', userInfo)
-
-        if (!isWorkStart) {
-            const user = await SlackUser.create(userInfo)
-
-            console.log('user', user)
-
-            if (!user) {
-                // res.status(500).send('Create User for slack failure')
-            } else {
-                const time = await WorkLog.create(workStart)
-
-                if (!time) {
-                    // res.status(500).send(`Create WorkLog for ${userInfo.userName}  failure`)
-                }
-                await this.openModal(trigger_id, '출근 처리되었습니다.');
-
-
-            }
-        } else {
-            await this.openModal(trigger_id, '이미 출근처리되었습니다.');
-        }
     };
 
     workEnd = async (user: any, trigger_id: any) => {
-        const user_id = user.id;
-        const workEnd = moment().format('YYYY-MM-DDTHH:mm:ss');
+        return dbs.WorkLog.getTransaction(async (transaction: Transaction) => {
+            const user_id = user.id;
+            const workEnd = moment().format('YYYY-MM-DDTHH:mm:ss');
 
-        const isWorkStart = await WorkLog.findOne({
-            where: {
-                user_id,
-                start: {
-                    //범위
-                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
-                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
+            const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id)
+
+            const isWorkEnd = await dbs.WorkLog.hasWorkEnd(user_id)
+
+
+            if (isWorkEnd) {
+                await this.openModal(trigger_id, '이미 퇴근하셨습니다.');
+            } else if (isWorkStart) {
+                const workDone = await dbs.WorkLog.update({end: workEnd}, {user_id: user_id});
+
+                if (workDone[0] === 1) {
+
+                    await this.openModal(trigger_id, '퇴근 처리되었습니다. ');
+                } else {
+                    // res.status(500).send('Update slack failure. (id: ' + user_id + ')')
                 }
-            }
-        })
 
-        const isWorkEnd = await WorkLog.findOne({
-            where: {
-                user_id,
-                end: {
-                    //범위
-                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
-                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
-                }
-            }
-        })
-
-
-        if (isWorkEnd) {
-            await this.openModal(trigger_id, '이미 퇴근하셨습니다.');
-        } else if (isWorkStart) {
-            const workDone = await WorkLog.update({end: workEnd},
-                {where: {user_id}})
-
-            if (workDone[0] === 1) {
-
-                await this.openModal(trigger_id, '퇴근 처리되었습니다. ');
             } else {
-                // res.status(500).send('Update slack failure. (id: ' + user_id + ')')
+                await this.openModal(trigger_id, '출근기록이 없습니다. 출근 버튼 먼저 눌러주세요');
             }
-
-        } else {
-            await this.openModal(trigger_id, '출근기록이 없습니다. 출근 버튼 먼저 눌러주세요');
-        }
+        })
     }
 
 
@@ -154,24 +124,6 @@ class workTimeController {
         const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
         console.log(result)
     };
-
-
-    // findAll = (req: any, res: any) => {
-    //     // const title = req.query.title;
-    //     let condition = {where: {}};
-    //
-    //     // if (keyword) {
-    //     //     condition = { where: { [Op.or]: [{ title: { [Op.like]: `%${keyword}%` } }, { description: { [Op.like]: `%${keyword}%` } }] } }
-    //     // };
-    //     Slack.findAll(condition)
-    //         .then((data: any) => {
-    //             res.send(data);
-    //         })
-    //         .catch((err: { message: any; }) => {
-    //             res.status(500).send({message: err.message || 'Retrieve all slack failure.'});
-    //         });
-    // };
-
 
 
     openCalender = async (req: any, res: any) => {
@@ -252,67 +204,28 @@ class workTimeController {
     workHistory = async (user: any, historyDuration: string, trigger_id: string) => {
         console.log(historyDuration)
         const user_id = user.id;
-        const workHistory = await WorkLog.findAll({
-            where: {
-                user_id,
-                start: {
-                    [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
-                }
-            },
+        const workHistory = await dbs.WorkLog.findAll({
+
+            user_id,
+            start: {
+                [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
+            }
 
 
         })
 
         const result = _.map(workHistory, (log: any) => {
-
-            // return {
-            //     start: log.start,
-            //     end: log.end,
-            //     is_야근: true,
-            //     초과근무: true,
-            // }
             return {
                 "type": "section",
-                "fields": [
+                "text":
                     {
-                        "type": "plain_text",
-                        "text": `날짜 : ${moment().subtract(historyDuration, 'days').toDate()}`,
-                        "emoji": true
-                    },
-                    {
-                        "type": "plain_text",
-                        "text": ' ',
-                        "emoji": true
-                    },
-                    {
-                        "type": "plain_text",
-                        "text": `출근 시간`,
-                        "emoji": true
-                    },
-                    {
-                        "type": "plain_text",
-                        "text": new Date(log.start).toLocaleTimeString(),
-                        "emoji": true
-                    }, {
-                        "type": "plain_text",
-                        "text": `퇴근 시간`,
-                        "emoji": true
-                    },
-                    {
-                        "type": "plain_text",
-                        "text": new Date(log.end).toLocaleTimeString(),
-                        "emoji": true
-                    },
-                ]
+                        "type": "mrkdwn",
+                        "text": `${new Date(log.start).toLocaleDateString()}     *|*       ${new Date(log.start).toLocaleTimeString()}      *|*      ${new Date(log.end).toLocaleTimeString()}\n*--------------------------------------------------------------------*`
+                    }
+
             }
         })
-        // let obj = {}
-        // for (let i in result) {
-        // 
-        //     obj = {...obj, ...result[i]}
-        //   
-        //
-        // }
+
 
         return result;
 
@@ -327,7 +240,7 @@ class workTimeController {
         const user_id = response.user.id;
 
 
-        const workHistory = await WorkLog.findAll({
+        const workHistory = await dbs.WorkLog.findAll({
             where: {user_id},
         })
 

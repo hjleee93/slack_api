@@ -1,6 +1,7 @@
 import Model from '../../../_base/model';
-import { DataTypes, Sequelize, Transaction } from 'sequelize';
+import {DataTypes, Op, Sequelize, Transaction} from 'sequelize';
 import { dbs } from '../../../../commons/globals';
+import * as moment from "moment-timezone";
 
 class WorkLogModel extends Model {
     protected initialize(): void {
@@ -22,53 +23,34 @@ class WorkLogModel extends Model {
          }
 
 
-    async get({ battle_uid }: { battle_uid: string }, transaction?: Transaction) {
-        const record = await this.model.findOne({
+  async hasWorkStart(user_id:any, transaction?:Transaction){
+        return await this.model.findOne({
             where: {
-                uid: battle_uid,
-            },
-            include: [{
-                model: dbs.User.model,
-                attributes: ['uid', 'name', 'picture'],
-            }, {
-                model: dbs.Game.model,
-                attributes: ['uid', 'pathname', 'title', 'version', 'control_type', 'url_game', 'url_thumb', 'url_thumb_webp', 'url_thumb_gif']
-            }]
-        });
-
-        return record.get({ plain: true });
-    }
-
-
-    async getInfo(uid: string) {
-        const record = await this.model.findOne({
-            where: { uid },
-            attributes: {
-                exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-            },
-            include: [{
-                model: dbs.User.model,
-                as: 'host',
-                attributes: {
-                    exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-                },
-            }, {
-                model: dbs.Game.model,
-                attributes: {
-                    exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-                },
-                include: [{
-                    model: dbs.User.model,
-                    attributes: {
-                        exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-                    },
-                    required: true,
-                }],
-            }]
+                user_id,
+                start: {
+                    //범위
+                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
+                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
+                }
+            }
         })
+  }
 
-        return record.get({ plain: true })
+    async hasWorkEnd(user_id:any, transaction?:Transaction){
+        return await this.model.findOne({
+            where: {
+                user_id,
+                end: {
+                    //범위
+                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
+                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
+                }
+            }
+        })
     }
+
+
+
 }
 
 

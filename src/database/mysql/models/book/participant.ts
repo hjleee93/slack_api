@@ -16,52 +16,11 @@ class ParticipantModel extends Model {
     }
 
 
-    async get({battle_uid}: { battle_uid: string }, transaction?: Transaction) {
-        const record = await this.model.findOne({
-            where: {
-                uid: battle_uid,
-            },
-            include: [{
-                model: dbs.User.model,
-                attributes: ['uid', 'name', 'picture'],
-            }, {
-                model: dbs.Game.model,
-                attributes: ['uid', 'pathname', 'title', 'version', 'control_type', 'url_game', 'url_thumb', 'url_thumb_webp', 'url_thumb_gif']
-            }]
-        });
+    async findUser(user_id: any) {
+        const result = await this.findOne({user_id: user_id})
 
-        return record.get({plain: true});
-    }
+        return result;
 
-
-    async getInfo(uid: string) {
-        const record = await this.model.findOne({
-            where: {uid},
-            attributes: {
-                exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-            },
-            include: [{
-                model: dbs.User.model,
-                as: 'host',
-                attributes: {
-                    exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-                },
-            }, {
-                model: dbs.Game.model,
-                attributes: {
-                    exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-                },
-                include: [{
-                    model: dbs.User.model,
-                    attributes: {
-                        exclude: ['id', 'created_at', 'updated_at', 'deleted_at']
-                    },
-                    required: true,
-                }],
-            }]
-        })
-
-        return record.get({plain: true})
     }
 }
 

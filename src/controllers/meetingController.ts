@@ -6,24 +6,15 @@ import qs from "qs";
 import {eBookingState} from "../commons/enums";
 import slackController from "./slackController";
 import {dbs} from "../commons/globals";
+import {Transaction} from "sequelize";
+import {forEach} from "lodash";
 
-const Booking = dbs.Booking;
-const Participant = dbs.participant;
 
 class meetingController {
 
-    meetingList = async (user: any, trigger_id: any, clickedType?:string) => {
+    meetingList = async (user: any, trigger_id: any, clickedType?: string) => {
 
-        const meetingList = await Booking.findAll({
-            where: {
-                user_id: user.id,
-                //     start: {
-                //         [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
-                //     }
-            },
-
-
-        })
+        const meetingList = await dbs.Booking.findAll({user_id: user.id})
 
         // const userList = await Participant.findAll({
         //
@@ -39,30 +30,16 @@ class meetingController {
         // const result = await axios.get('https://slack.com/api/users.info', qs.stringify(args));
 
 
-        const result = _.map(meetingList, (info: any) => {
-            // for (let i = 0; i < bookingList.length; i++) {
-            //     const args = {
-            //         token: slackConfig.token,
-            //         user: bookingList[i]
-            //     };
-            // }
-            //
-            // const bookingMemberList = await Participant.findAll({
-            //     where: {
-            //         booking_id: info.dataValues.id,
-            //     }
-            //
-            // })
-            // console.log(bookingMemberList)
-
-            if (info.state == eBookingState.Booked) {
+        const result = _.map(meetingList, (meeting: any) => {
+            let info = meeting.dataValues
+            if (!info.deleted_at) {
 
 
                 return {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `*${info.title}*\n${info.date} - ${info.start}-${info.end}\n${info.description}\n참여자: @iris, ~@zelda~`
+                        "text": `*${info.title}*\n${info.date} - ${info.start}-${info.end}\n${info.description}\n`
                     },
                     "accessory": {
                         "type": "button",
@@ -76,12 +53,11 @@ class meetingController {
                     },
                 }
 
-            } else if (info.state == eBookingState.Cancel) {
+            } else {
                 return null;
 
             }
         })
-
 
 
         return result.filter(
@@ -91,72 +67,117 @@ class meetingController {
 
 
     createBooking = async (view: any, user: any) => {
-        const values = view.state.values;
-        const blocks = view.blocks;
+        return dbs.Booking.getTransaction(async (transaction: Transaction) => {
+            const values = view.state.values;
+            const blocks = view.blocks;
 
 
-        const createBooking = {
-            user_id: user.id,
-            room_number: values[blocks[1].block_id].room_number.selected_option.value,
-            title: values[blocks[2].block_id].title.value,
-            description: values[blocks[3].block_id].description.value,
-            date: values[blocks[4].block_id].date.selected_date,
-            start: values[blocks[5].block_id].start.selected_option.value,
-            end: values[blocks[5].block_id].end.selected_option.value,
-            state: eBookingState.Booked,
-        }
-
-        const participantList: any = [];
-        const participantArr = values[blocks[6].block_id].participant_list.selected_users;
-
-        const booking = await Booking.create(createBooking);
-
-        for (let i = 0; i < participantArr.length; i++) {
-
-            let obj = {
-                user_id: participantArr[i],
-                booking_id: booking.id
-                // name:view.username
-            }
-            participantList.push(obj)
-        }
-
-        participantList.push(
-            {
+            const createBooking = {
                 user_id: user.id,
-                booking_id: booking.id
-                // name:user.username
+                room_number: values[blocks[1].block_id].room_number.selected_option.value,
+                title: values[blocks[2].block_id].title.value,
+                description: values[blocks[3].block_id].description.value,
+                date: values[blocks[4].block_id].date.selected_date,
+                start: values[blocks[5].block_id].start.selected_option.value,
+                end: values[blocks[5].block_id].end.selected_option.value,
+                state: eBookingState.Booked,
             }
-        )
 
+            const participantList: any = [];
+            const participantArr = values[blocks[6].block_id].participant_list.selected_users;
 
-        const result = await Participant.bulkCreate(participantList);
+            const booking = await dbs.Booking.create(createBooking, transaction);
 
-        await slackController.sendDm(participantArr, user, createBooking);
+            for (let i = 0; i < participantArr.length; i++) {
 
+                let obj = {
+                    user_id: participantArr[i],
+                    booking_id: booking.id
+                    // name:view.username
+                }
+                participantList.push(obj)
+            }
 
+            participantList.push(
+                {
+                    user_id: user.id,
+                    booking_id: booking.id
+                    // name:user.username
+                }
+            )
+            // throw new Error()
 
+            const result = await dbs.Participant.bulkCreate(participantList, transaction);
+
+            await slackController.sendDm(participantArr, user, createBooking);
+        })
 
 
     }
 
+    // sendResponse= async (booking_id: string, user: any, trigger_id: string) => {
+    //     const result = axios.post()
+    // }
+
+
     deleteMeeting = async (booking_id: string, user: any, trigger_id: string) => {
-        const deleteMeeting = await Booking.update({state: eBookingState.Cancel},
-            {where: {id: booking_id}})
+        const deleteMeeting = await dbs.Booking.destroy({id: booking_id})
 
 
         return deleteMeeting
 
     }
 
-    getMeetingInfo= async (booking_id: string, user: any) => {
+    getMeetingInfo = async (booking_id: string, user: any) => {
 
-        const meeting = await Booking.findOne({id: booking_id});
+        const meeting = await dbs.Booking.findOne({id: booking_id});
         return meeting;
 
     }
 
-    editBooking= async (booking_id: string, user: any) => {
+    editBooking = async (view: any, booking_id: any, user: any) => {
+
+        return dbs.Booking.getTransaction(async (transaction: Transaction) => {
+            const values = view.state.values;
+            const blocks = view.blocks;
+
+
+            const bookingInfo = {
+                room_number: values[blocks[1].block_id].room_number.selected_option.value,
+                title: values[blocks[2].block_id].title.value,
+                description: values[blocks[3].block_id].description.value,
+                date: values[blocks[4].block_id].date.selected_date,
+                start: values[blocks[5].block_id].start.selected_option.value,
+                end: values[blocks[5].block_id].end.selected_option.value,
+                state: eBookingState.Modified,
+            }
+
+            const participantList: any = [];
+            const participantArr = values[blocks[6].block_id].participant_list.selected_users;
+
+
+            const booking = await dbs.Booking.update(bookingInfo, {id: booking_id}, transaction);
+
+
+            for (let i = 0; i < participantArr.length; i++) {
+
+                let obj = {
+                    user_id: participantArr[i],
+                    booking_id: booking_id
+                    // name:view.username
+                }
+                participantList.push(obj)
+            }
+
+
+            // throw new Error()
+            console.log(participantList)
+            await dbs.Participant.destroy({booking_id:booking_id});
+
+            const result = await dbs.Participant.bulkCreate(participantList, transaction);
+
+        })
+
 
     }
 }
