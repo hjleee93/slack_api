@@ -1,0 +1,1 @@
+{"version":3,"file":"slackRoute.js","sourceRoot":"","sources":["../../../src/routes/slackRoute.ts"],"names":[],"mappings":";;AACA,oEAA6D;AAE7D,kBAAe,CAAC,MAAc,EAAE,EAAE;IAE9B,MAAM,CAAC,IAAI,CAAC,eAAe,EAAE,yBAAe,CAAC,KAAK,CAAC,CAAA;IACnD,MAAM,CAAC,IAAI,CAAC,gBAAgB,EAAE,yBAAe,CAAC,OAAO,CAAC,CAAA;AAE1D,CAAC,CAAA"}

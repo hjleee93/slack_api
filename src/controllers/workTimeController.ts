@@ -13,13 +13,8 @@ const qs = require('qs');
 
 class workTimeController {
 
-    basicApi = async (req: any, res: any) => {
-        console.log(req)
-
-        res.send();
-    }
-
     workStart = async (user: any, trigger_id: any) => {
+
         return dbs.WorkLog.getTransaction(async (transaction: Transaction) => {
             const user_id = user.id;
 
@@ -91,28 +86,31 @@ class workTimeController {
     openModal = async (trigger_id: any, text: string) => {
 
         const modal = {
-            "type": "modal",
-            "title": {
-                "type": "plain_text",
-                "text": "My App",
-                "emoji": true
-            },
+            "response_action": "update",
+            "view": {
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "My App",
+                    "emoji": true
+                },
 
-            "close": {
-                "type": "plain_text",
-                "text": "ok",
-                "emoji": true
-            },
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "plain_text",
-                        "text": text,
-                        "emoji": true
+                "close": {
+                    "type": "plain_text",
+                    "text": "ok",
+                    "emoji": true
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "plain_text",
+                            "text": text,
+                            "emoji": true
+                        }
                     }
-                }
-            ]
+                ]
+            }
         }
         const args = {
             token: slackConfig.token,

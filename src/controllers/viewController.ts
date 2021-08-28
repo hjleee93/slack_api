@@ -1,23 +1,30 @@
 class viewController {
 
+    private availTime: any[] = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
-    time(){
-        let time = 0;
-        let blocks = [];
+    setStartTime(timeList?: any[]) {
+        const blocks:any[]= [];
+        const startTime = this.startTime(timeList || this.availTime)
 
-        for(let i = 10; i < 24; i++){
-          blocks.push({
+
+        for (let i = 0; i < startTime.length; i++) {
+            blocks.push({
                 "text": {
                     "type": "plain_text",
-                    "text": `${i}:00`,
+                    "text": `${startTime[i]}:00`,
                     "emoji": true
                 },
-                "value": `${i}:00`
-            } )
+                "value": `${startTime[i]}`
+            })
         }
 
-return blocks
+        return blocks
     }
+
+    startTime(timeList: any[]) {
+        return this.availTime.filter(x => !timeList.includes(x.toString()));
+    }
+
 
 }
 
