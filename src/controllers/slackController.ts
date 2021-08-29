@@ -10,154 +10,29 @@ import viewController from "./viewController";
 import workTimeController from "./workTimeController";
 import {dbs} from "../commons/globals";
 
+const home_view = require("../json/home.json");
+const booking_done_modal = require("../json/booking_done_modal.json");
+const booking_edit_done_modal = require("../json/booking_edit_done_modal.json");
+
+
 const qs = require('qs');
 
 class slackController {
 
+
     private bookingId: number = 0;
-    private time = viewController.setStartTime()
+    private startTime = viewController.setStartTime();
+    private endTime = viewController.setEndTime();
+    private meetingStartTime = 0;
+
 
     event = async (req: any, res: any) => {
         res.send(req.body)
-
         const {type, user, channel, tab, text, subtype} = req.body.event;
-
         if (type === 'app_home_opened') {
-            let homeBlock = [
-                {
-
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "emoji": true,
-                                "text": "출근"
-                            },
-                            "style": "primary",
-                            "value": "click_me_123",
-                            "action_id": "work_start"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "emoji": true,
-                                "text": "퇴근"
-                            },
-                            "style": "danger",
-                            "value": "click_me_123",
-                            "action_id": "work_end"
-                        },
-                    ]
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "출퇴근 통계를 확인하고 싶은 날짜를 고르세요",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "7일",
-                                "emoji": true
-                            },
-                            "value": "7",
-                            "action_id": "work_history1"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "15일",
-                                "emoji": true
-                            },
-                            "value": "15",
-                            "action_id": "work_history2"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "30일",
-                                "emoji": true
-                            },
-                            "value": "30",
-                            "action_id": "work_history3"
-                        },
-
-                    ]
-                },
-                {
-                    "type": "divider"
-                },
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "회의실",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "예약",
-                                "emoji": true
-                            },
-                            "style": "primary",
-                            "value": "booking",
-                            "action_id": "meeting_booking"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "취소",
-                                "emoji": true
-                            },
-                            "style": "danger",
-                            "value": "cancel",
-                            "action_id": "meeting_cancel"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "수정",
-                                "emoji": true
-                            },
-                            "value": "edit",
-                            "action_id": "meeting_list1"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "확인",
-                                "emoji": true
-                            },
-                            "value": "delete",
-                            "action_id": "meeting_list2"
-                        }
-                    ]
-                }
-            ]
+            let homeBlock = home_view;
             await this.displayHome(user, homeBlock);
         }
-        // res.send(req.body)
     }
 
     actions = async (req: any, res: any) => {
@@ -174,34 +49,14 @@ class slackController {
             const submitType = payload.view.submit.text
             if (submitType === 'Edit') {
                 await meetingController.editBooking(payload.view, this.bookingId, user)
+                res.send(booking_edit_done_modal)
             }
             else {
-
                 await meetingController.createBooking(payload.view, user);
+                console.log
+                (booking_done_modal)
+                res.send(booking_done_modal)
             }
-            res.send({
-                "response_action": "update",
-                "view": {
-                    "type": "modal",
-                    "title": {
-                        "type": "plain_text",
-                        "text": "Updated view"
-                    },
-                    "close": {
-                        "type": "plain_text",
-                        "text": "닫기",
-                    },
-                    "blocks": [
-                        {
-                            "type": "section",
-                            "text": {
-                                "type": "plain_text",
-                                "text": `${submitType === 'Edit' ? '수정 완료' : '예약 완료됨'}`
-                            }
-                        }
-                    ]
-                }
-            })
 
         }
         if (actions && actions[0].action_id.match(/work_start/)) {
@@ -851,7 +706,7 @@ class slackController {
                 timeList.push(meeting.end)
             })
 
-            this.time = viewController.setStartTime(timeList)
+            this.startTime = viewController.setStartTime(timeList)
 
             const modal = {
                 type: 'modal',
@@ -976,6 +831,7 @@ class slackController {
                     },
                     {
                         "type": "actions",
+                        dispatch_action: true,
                         "elements": [
                             {
                                 "type": "static_select",
@@ -987,9 +843,9 @@ class slackController {
                                 "options": [
 
 
-                                    ...this.time
+                                    ...this.startTime
                                 ],
-                                "action_id": "start"
+                                "action_id": "meeting_start"
                             },
                             //회의 끝
                             {
@@ -1000,10 +856,10 @@ class slackController {
                                     "emoji": true
                                 },
                                 "options": [
-                                    ...this.time
+                                    ...this.endTime
 
                                 ],
-                                "action_id": "end"
+                                "action_id": "meeting_end"
                             }
                         ]
                     },
@@ -1032,13 +888,203 @@ class slackController {
             const args = {
                 token: slackConfig.token,
                 view: JSON.stringify(modal),
-                view_id:container.view_id
+                view_id: container.view_id
             };
-console.log(args)
+
+            const result = await axios.post('https://slack.com/api/views.update', qs.stringify(args));
+            res.sendStatus(200);
+
+        }
+        else if (actions && actions[0].action_id.match(/meeting_start/)) {
+            const endTimeList = viewController.setEndTime(actions[0].selected_option.value)
+
+            const modal = {
+                type: 'modal',
+                "title":
+                    {
+                        "type":
+                            "plain_text",
+                        "text":
+                            "My App",
+                        "emoji":
+                            true
+                    }
+                ,
+                "submit":
+                    {
+                        "type":
+                            "plain_text",
+                        "text":
+                            "Submit",
+                        "emoji":
+                            true
+                    }
+                ,
+                "close":
+                    {
+                        "type":
+                            "plain_text",
+                        "text":
+                            "Cancel",
+                        "emoji":
+                            true
+                    }
+                ,
+                blocks: [
+                    // Text input
+                    {
+                        "type": "section",
+                        "block_id": "booking-identifier",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "선택부탁",
+                            "emoji": true
+                        }
+                    },
+                    {
+                        "type": "input",
+                        "element": {
+                            "type": "static_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "Select an item",
+                                "emoji": true
+                            },
+                            "options": [
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "302",
+                                        "emoji": true
+                                    },
+                                    "value": "302"
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": "402",
+                                        "emoji": true
+                                    },
+                                    "value": "402"
+                                },
+
+                            ],
+                            "action_id": "room_number"
+                        },
+                        "label": {
+                            "type": "plain_text",
+                            "text": "회의실",
+                            "emoji": true
+                        }
+                    },
+                    {
+                        "type": "input",
+                        "element": {
+                            "type": "plain_text_input",
+                            "action_id": "title"
+                        },
+                        "label": {
+                            "type": "plain_text",
+                            "text": "안건",
+                            "emoji": true
+                        }
+                    },
+                    {
+                        "type": "input",
+
+                        "element": {
+                            "type": "plain_text_input",
+                            "multiline": true,
+                            "action_id": "description",
+
+                        },
+                        "label": {
+                            "type": "plain_text",
+                            "text": "자세히",
+                            "emoji": true
+                        },
+                        "optional": true
+                    },
+                    {
+                        "type": "input",
+                        dispatch_action: true,
+                        "element": {
+                            "type": "datepicker",
+                            "initial_date": moment().format('yyyy-MM-DD'),
+                            "action_id": "select_date"
+                        },
+                        "label": {
+                            "type": "plain_text",
+                            "text": "미팅 할 날짜",
+                            "emoji": true
+                        }
+                    },
+                    {
+                        "type": "actions",
+                        // dispatch_action: true,
+                        "elements": [
+                            {
+                                "type": "static_select",
+                                "placeholder": {
+                                    "type": "plain_text",
+                                    "text": "회의 시작 시각",
+                                    "emoji": true
+                                },
+                                "options": [
+
+
+                                    ...this.startTime
+                                ],
+                                "action_id": "meeting_start"
+                            },
+                            //회의 끝
+                            {
+                                "type": "static_select",
+                                "placeholder": {
+                                    "type": "plain_text",
+                                    "text": "회의 종료 시각",
+                                    "emoji": true
+                                },
+                                "options": [
+                                    ...endTimeList
+
+                                ],
+                                "action_id": "meeting_end"
+                            }
+                        ]
+                    },
+                    //참석자
+                    {
+                        "type": "input",
+                        "element": {
+                            "type": "multi_users_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "Select users",
+                                "emoji": true
+                            },
+                            "action_id": "participant_list"
+                        },
+                        "label": {
+                            "type": "plain_text",
+                            "text": "미팅 참여자",
+                            "emoji": true
+                        }
+                    },
+
+                ]
+            }
+
+            const args = {
+                token: slackConfig.token,
+                view: JSON.stringify(modal),
+                view_id: container.view_id
+            };
 
             const result = await axios.post('https://slack.com/api/views.update', qs.stringify(args));
 
-            console.log(result)
+        }
+        else if (actions && actions[0].action_id.match(/meeting_end/)) {
 
 
         }
@@ -1213,9 +1259,9 @@ console.log(args)
                             "options": [
 
 
-                                ...this.time
+                                ...this.startTime
                             ],
-                            "action_id": "start"
+                            "action_id": "meeting_start"
                         },
                         //회의 끝
                         {
@@ -1226,10 +1272,10 @@ console.log(args)
                                 "emoji": true
                             },
                             "options": [
-                                ...this.time
+                                ...this.endTime
 
                             ],
-                            "action_id": "end"
+                            "action_id": "meeting_end"
                         }
                     ]
                 },
@@ -1409,7 +1455,7 @@ console.log(args)
                             },
                             "options": [
 
-                                ...this.time
+                                ...this.startTime
                             ],
                             "initial_option": {
                                 "text": {
@@ -1419,7 +1465,7 @@ console.log(args)
                                 },
                                 "value": bookingInfo.start
                             },
-                            "action_id": "start"
+                            "action_id": "meeting_start"
                         },
                         //회의 끝
                         {
@@ -1430,7 +1476,7 @@ console.log(args)
                                 "emoji": true
                             },
                             "options": [
-                                ...this.time
+                                ...this.endTime
 
                             ],
                             "initial_option": {
@@ -1441,7 +1487,7 @@ console.log(args)
                                 },
                                 "value": bookingInfo.end
                             },
-                            "action_id": "end"
+                            "action_id": "meeting_end"
                         }
                     ]
                 },

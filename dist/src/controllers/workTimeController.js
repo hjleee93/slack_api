@@ -108,7 +108,6 @@ class workTimeController {
             };
             console.log('args', args);
             const result = yield axios_1.default.post('https://slack.com/api/views.open', qs.stringify(args));
-            console.log(result);
         });
         this.openCalender = (req, res) => __awaiter(this, void 0, void 0, function* () {
             const body = {

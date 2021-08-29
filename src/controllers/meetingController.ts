@@ -78,8 +78,8 @@ class meetingController {
                 title: values[blocks[2].block_id].title.value,
                 description: values[blocks[3].block_id].description.value,
                 date: values[blocks[4].block_id].select_date.selected_date,
-                start: values[blocks[5].block_id].start.selected_option.value,
-                end: values[blocks[5].block_id].end.selected_option.value,
+                // start: values[blocks[5].block_id].meeting_start.selected_option.value,
+                // end: values[blocks[5].block_id].meeting_end.selected_option.value,
                 state: eBookingState.Booked,
             }
 

@@ -120,7 +120,7 @@ class workTimeController {
         console.log('args', args)
 
         const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
-        console.log(result)
+
     };
 
 
