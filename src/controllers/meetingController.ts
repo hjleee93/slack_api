@@ -67,7 +67,6 @@ class meetingController {
         const values = view.state.values;
         const blocks = view.blocks;
 
-        console.log(values)
 
 
         const createMeeting = {

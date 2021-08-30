@@ -27,7 +27,7 @@ class BookingModel extends Model {
         return result;
     }
 
-    async hasBookingOnDate(date: string){
+    async hasBookingOnDate(date: any){
         const result = await this.findAll({date:date});
 
         return result;

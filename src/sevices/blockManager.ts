@@ -1,9 +1,45 @@
 import * as moment from "moment-timezone";
 import viewController from "../controllers/viewController";
+import {dbs} from "../commons/globals";
+import * as _ from "lodash";
 
 class BlockManager {
     private startTime = viewController.setStartTime();
     private endTime = viewController.setEndTime();
+
+    confirmModal(text: string) {
+
+        const blocks =
+            {
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "My App",
+                    "emoji": true
+                },
+
+                "close": {
+                    "type": "plain_text",
+                    "text": "ok",
+                    "emoji": true
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "plain_text",
+                            "text": text,
+                            "emoji": true
+                        }
+                    }
+                ]
+
+            }
+
+
+        return blocks;
+
+    }
 
     dmJson(meetingInfo: any) {
 
@@ -160,8 +196,7 @@ class BlockManager {
     }
 
 
-    meetingModal(initData?: any) {
-        console.log(initData)
+    meetingModal(initData?: any, meetings?: any) {
 
         const modal = {
             type: 'modal',
@@ -227,10 +262,10 @@ class BlockManager {
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": initData ? initData.room_number : '302',
+                                "text": '302',
                                 "emoji": true
                             },
-                            "value": initData ? initData.room_number : '302'
+                            "value": '302'
                         },
                         "action_id": "room_number"
                     },
@@ -245,7 +280,7 @@ class BlockManager {
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "title",
-                        "initial_value": initData ? initData.title : ' '
+                        "initial_value": ' '
                     },
                     "label": {
                         "type": "plain_text",
@@ -260,7 +295,7 @@ class BlockManager {
                         "type": "plain_text_input",
                         "multiline": true,
                         "action_id": "description",
-                        "initial_value": initData ? initData.description : ' '
+                        "initial_value": ' '
 
                     },
                     "label": {
@@ -275,7 +310,7 @@ class BlockManager {
                     dispatch_action: true,
                     "element": {
                         "type": "datepicker",
-                        "initial_date": initData ? initData.date : moment().format('yyyy-MM-DD'),
+                        "initial_date": moment().format('yyyy-MM-DD'),
                         "action_id": "selected_date"
                     },
                     "label": {
@@ -297,15 +332,16 @@ class BlockManager {
                             },
                             "options": [
                                 ...this.startTime
+
                             ],
                             //todo:오늘 날짜기준으로 시간 다시 맞춰야함
                             "initial_option": {
                                 "text": {
                                     "type": "plain_text",
-                                    "text": `${initData ? initData.start + ':00' : '10:00'}`,
+                                    "text": `${this.startTime[0].value}:00`,
                                     "emoji": true
                                 },
-                                "value": initData ? initData.start : '10'
+                                "value": `${this.startTime[0].value}`
                             },
                             "action_id": "meeting_start"
                         },
@@ -318,52 +354,22 @@ class BlockManager {
                                 "emoji": true
                             },
                             "options": [
+                                // ...this.endTime
+                                // ...startTimeList
                                 ...this.endTime
                             ],
                             "initial_option": {
                                 "text": {
                                     "type": "plain_text",
-                                    "text": `${initData ? initData.end + ':00' : '11:00'}`,
+                                    "text": `${this.endTime[0].value}:00`,
                                     "emoji": true
                                 },
-                                "value": initData ? initData.end : '11'
+                                "value": `${this.endTime[0].value}`
                             },
                             "action_id": "meeting_end"
                         }
                     ]
-                }, // {
-                //     "type": "actions",
-                //
-                //     "elements": [
-                //         {
-                //             "type": "static_select",
-                //             // dispatch_action: true,
-                //             "placeholder": {
-                //                 "type": "plain_text",
-                //                 "text": "회의 시작 시각",
-                //                 "emoji": true
-                //             },
-                //             "options": [
-                //                 ...this.startTime
-                //             ],
-                //             "action_id": "meeting_start"
-                //         },
-                //         //회의 끝
-                //         {
-                //             "type": "static_select",
-                //             "placeholder": {
-                //                 "type": "plain_text",
-                //                 "text": "회의 종료 시각",
-                //                 "emoji": true
-                //             },
-                //             "options": [
-                //                 ...this.endTime
-                //
-                //             ],
-                //             "action_id": "meeting_end"
-                //         }
-                //     ]
-                // },
+                },
                 //참석자
                 {
                     "type": "input",
@@ -387,7 +393,224 @@ class BlockManager {
             ]
         }
 
-        return modal
+        return modal;
+    }
+
+    updateMeetingModal(initData: any, meetings?: any) {
+
+        console.log(initData)
+
+        const timeList: number[] = [];
+        let startTimeList = [];
+        let endTimeList = [];
+
+        if (meetings) {
+            _.forEach(meetings, (meeting: any) => {
+                timeList.push(meeting.start)
+                timeList.push(meeting.end)
+            })
+            startTimeList = viewController.setStartTime(timeList);
+        }
+
+        startTimeList = initData ? viewController.setStartTime(timeList) : this.startTime;
+        endTimeList = viewController.setEndTime(initData.start)
+        console.log(endTimeList)
+        const modal = {
+            type: 'modal',
+            "title":
+                {
+                    "type":
+                        "plain_text",
+                    "text":
+                        "회의실 예약",
+                    "emoji":
+                        true
+                }
+            ,
+            "submit":
+                {
+                    "type":
+                        "plain_text",
+                    "text":
+                        "Submit",
+                    "emoji":
+                        true
+                }
+            ,
+            "close":
+                {
+                    "type":
+                        "plain_text",
+                    "text":
+                        "Cancel",
+                    "emoji":
+                        true
+                }
+            ,
+            blocks: [
+                {
+                    "type": "input",
+                    "element": {
+                        "type": "static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select an item",
+                            "emoji": true
+                        },
+                        "options": [
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "302",
+                                    "emoji": true
+                                },
+                                "value": "302"
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "402",
+                                    "emoji": true
+                                },
+                                "value": "402"
+                            },
+
+                        ],
+                        "initial_option": {
+                            "text": {
+                                "type": "plain_text",
+                                "text":initData.room_number ,
+                                "emoji": true
+                            },
+                            "value":  initData.room_number
+                        },
+                        "action_id": "room_number"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "회의실",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "title",
+                        "initial_value":initData.title
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "안건",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "input",
+
+                    "element": {
+                        "type": "plain_text_input",
+                        "multiline": true,
+                        "action_id": "description",
+                        "initial_value":  initData.description
+
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "자세히",
+                        "emoji": true
+                    },
+                    "optional": true
+                },
+                {
+                    "type": "input",
+                    dispatch_action: true,
+                    "element": {
+                        "type": "datepicker",
+                        "initial_date":  initData.date,
+                        "action_id": "selected_date"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "미팅 할 날짜",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "actions",
+                    // dispatch_action: true,
+                    "elements": [
+                        {
+                            "type": "static_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "회의 시작 시각",
+                                "emoji": true
+                            },
+                            "options": [
+                                ...startTimeList
+
+                            ],
+                            //todo:오늘 날짜기준으로 시간 다시 맞춰야함
+                            "initial_option": {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": `${initData.start}:00`,
+                                    "emoji": true
+                                },
+                                "value": `${initData.start}`
+                            },
+                            "action_id": "meeting_start"
+                        },
+                        //회의 끝
+                        {
+                            "type": "static_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "회의 종료 시각",
+                                "emoji": true
+                            },
+                            "options": [
+                                // ...this.endTime
+                                // ...startTimeList
+                                ...endTimeList
+                            ],
+                            "initial_option": {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": `${endTimeList[0].value}:00`,
+                                    "emoji": true
+                                },
+                                "value": `${endTimeList[0].value}`
+                            },
+                            "action_id": "meeting_end"
+                        }
+                    ]
+                },
+                //참석자
+                {
+                    "type": "input",
+                    "element": {
+                        "type": "multi_users_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select users",
+                            "emoji": true
+                        },
+                        "action_id": "participant_list",
+                        // initial_users: userIdList
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "미팅 참여자",
+                        "emoji": true
+                    }
+                },
+
+            ]
+        }
+
+        return modal;
     }
 
 

@@ -8,6 +8,7 @@ import axios from "axios";
 
 import slackConfig from '../../config/slack';
 import {dbs} from "../commons/globals";
+import blockManager from "../sevices/blockManager";
 
 const qs = require('qs');
 
@@ -31,7 +32,7 @@ class workTimeController {
 
 
             if (!isWorkStart) {
-                if(!dbs.User.findUser(user_id)){
+                if (!dbs.User.findUser(user_id)) {
                     const user = await dbs.User.create(userInfo, transaction)
                 }
 
@@ -41,16 +42,17 @@ class workTimeController {
                 // if (!user) {
                 //     // res.status(500).send('Create User for slack failure')
                 // } else {
-                    const time = await dbs.WorkLog.create(workStart, transaction)
+                const time = await dbs.WorkLog.create(workStart, transaction)
 
-                    if (!time) {
-                        // res.status(500).send(`Create WorkLog for ${userInfo.userName}  failure`)
-                    }
-                    await this.openModal(trigger_id, '출근 처리되었습니다.');
+                if (!time) {
+                    // res.status(500).send(`Create WorkLog for ${userInfo.userName}  failure`)
+                }
+                await this.openModal(trigger_id, '출근 처리되었습니다.');
 
 
                 // }
-            } else {
+            }
+            else {
                 await this.openModal(trigger_id, '이미 출근처리되었습니다.');
             }
         })
@@ -68,17 +70,20 @@ class workTimeController {
 
             if (isWorkEnd) {
                 await this.openModal(trigger_id, '이미 퇴근하셨습니다.');
-            } else if (isWorkStart) {
+            }
+            else if (isWorkStart) {
                 const workDone = await dbs.WorkLog.update({end: workEnd}, {user_id: user_id});
 
                 if (workDone[0] === 1) {
 
                     await this.openModal(trigger_id, '퇴근 처리되었습니다. ');
-                } else {
+                }
+                else {
                     // res.status(500).send('Update slack failure. (id: ' + user_id + ')')
                 }
 
-            } else {
+            }
+            else {
                 await this.openModal(trigger_id, '출근기록이 없습니다. 출근 버튼 먼저 눌러주세요');
             }
         })
@@ -87,39 +92,13 @@ class workTimeController {
 
     openModal = async (trigger_id: any, text: string) => {
 
-        const modal = {
-            "response_action": "update",
-            "view": {
-                "type": "modal",
-                "title": {
-                    "type": "plain_text",
-                    "text": "My App",
-                    "emoji": true
-                },
+        const modal = blockManager.confirmModal(text)
 
-                "close": {
-                    "type": "plain_text",
-                    "text": "ok",
-                    "emoji": true
-                },
-                "blocks": [
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "plain_text",
-                            "text": text,
-                            "emoji": true
-                        }
-                    }
-                ]
-            }
-        }
         const args = {
             token: slackConfig.token,
             trigger_id: trigger_id,
             view: JSON.stringify(modal)
         };
-        console.log('args', args)
 
         const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
 
@@ -210,8 +189,6 @@ class workTimeController {
             start: {
                 [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
             }
-
-
         })
 
         const result = _.map(workHistory, (log: any) => {
@@ -222,20 +199,15 @@ class workTimeController {
                         "type": "mrkdwn",
                         "text": `${new Date(log.start).toLocaleDateString()}     *|*       ${new Date(log.start).toLocaleTimeString()}      *|*      ${new Date(log.end).toLocaleTimeString()}\n*--------------------------------------------------------------------*`
                     }
-
             }
         })
 
-
         return result;
-
     }
 
     findHistory = async (req: any, res: any) => {
 
         const response = JSON.parse(req.body.payload);
-
-        console.log('actions', response.actions)
 
         const user_id = response.user.id;
 

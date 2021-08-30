@@ -17,7 +17,6 @@ class viewController {
                 "value": `${startTime[i]}`
             })
         }
-
         return blocks
     }
 
