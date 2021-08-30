@@ -27,18 +27,20 @@ class workTimeController {
                 user_id,
                 start: moment().format('YYYY-MM-DDTHH:mm:ss')
             }
-            console.log(moment().format('yyyy-MM-DD').toString())
             const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id)
 
 
             if (!isWorkStart) {
-                const user = await dbs.User.create(userInfo, transaction)
+                if(!dbs.User.findUser(user_id)){
+                    const user = await dbs.User.create(userInfo, transaction)
+                }
 
-                console.log('user', user)
-
-                if (!user) {
-                    // res.status(500).send('Create User for slack failure')
-                } else {
+                //
+                // console.log('user', user)
+                //
+                // if (!user) {
+                //     // res.status(500).send('Create User for slack failure')
+                // } else {
                     const time = await dbs.WorkLog.create(workStart, transaction)
 
                     if (!time) {
@@ -47,7 +49,7 @@ class workTimeController {
                     await this.openModal(trigger_id, '출근 처리되었습니다.');
 
 
-                }
+                // }
             } else {
                 await this.openModal(trigger_id, '이미 출근처리되었습니다.');
             }

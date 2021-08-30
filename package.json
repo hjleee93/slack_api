@@ -4,8 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node ./dist/src/run.js",
-    "dev": "nodemon --config nodemon.json src/run.ts"
+    "start": "node ./dist/src/run.js"
   },
   "license": "MIT",
   "dependencies": {

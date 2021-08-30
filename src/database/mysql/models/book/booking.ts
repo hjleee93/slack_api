@@ -11,13 +11,20 @@ class BookingModel extends Model {
             title: {type: DataTypes.STRING},
             description: {type: DataTypes.STRING},
             date: {type: DataTypes.STRING},
-            start: {type: DataTypes.STRING},
-            end: {type: DataTypes.STRING},
+            start: {type: DataTypes.INTEGER},
+            end: {type: DataTypes.INTEGER},
         }
     }
 
     async afterSync(): Promise<void> {
         this.model.hasMany(dbs.Participant.model, {sourceKey: 'id', foreignKey: 'booking_id'});
+    }
+
+    async meetingInfo(meeting_id: string){
+        const result = await this.findOne({
+            id:meeting_id
+        })
+        return result;
     }
 
     async hasBookingOnDate(date: string){

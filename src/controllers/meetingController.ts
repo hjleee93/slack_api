@@ -16,77 +16,85 @@ class meetingController {
 
         const meetingList = await dbs.Booking.findAll({user_id: user.id})
 
-        // const userList = await Participant.findAll({
-        //
-        // })
-        // for (let i = 0; i < bookingList.length; i++) {
-        //     const args = {
-        //         token: slackConfig.token,
-        //         user: bookingList[i]
-        //     };
-        //
-        // }
+        //@ts-ignore
+        const list = meetingList.sort((a: any, b: any) => new Date(b.date) - new Date(a.date));
 
-        // const result = await axios.get('https://slack.com/api/users.info', qs.stringify(args));
-
-
-        const result = _.map(meetingList, (meeting: any) => {
-            let info = meeting.dataValues
-            if (!info.deleted_at) {
-
-
+        const result = _.map(list, (meeting: any) => {
+            if (!meeting.deleted_at) {
                 return {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `*${info.title}*\n${info.date} - ${info.start}-${info.end}\n${info.description}\n`
+                        "text": `\`${meeting.date}\` \` ${meeting.start}-${meeting.end}\` *${meeting.title}* \n`
                     },
+
                     "accessory": {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "emoji": true,
-                            "text": `${clickedType === 'delete' ? '삭제' : '수정'}`
-                        },
-                        "value": `${info.id}`,
-                        "action_id": `${clickedType === 'delete' ? 'meeting_delete' : 'meeting_edit'}`
-                    },
+                        // },
+                        "type": "overflow",
+                        "action_id": "select_meeting_option",
+                        "options": [
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Edit",
+                                    "emoji": true
+                                },
+                                "value": `${meeting.id}`
+
+                            },
+                            {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": "Delete",
+                                    "emoji": true
+                                },
+                                "value": `${meeting.id}`
+
+                            }
+                        ]
+                    }
                 }
 
             } else {
                 return null;
-
             }
         })
 
-
-        return result.filter(
-            (element, i) => element !== null
-        );
+        return result.filter((element, i) => element !== null);
     }
 
+    createMeetingForm(view: any, user: any) {
+        const values = view.state.values;
+        const blocks = view.blocks;
 
-    createBooking = async (view: any, user: any) => {
+        console.log(values)
+
+
+        const createMeeting = {
+            user_id: user.id,
+            room_number: values[blocks[0].block_id].room_number.selected_option.value,
+            title: values[blocks[1].block_id].title.value,
+            description: values[blocks[2].block_id].description.value,
+            date: values[blocks[3].block_id].selected_date.selected_date,
+            start: values[blocks[4].block_id].meeting_start.selected_option.value,
+            end: values[blocks[4].block_id].meeting_end.selected_option.value,
+        }
+
+        const participantArr = values[blocks[5].block_id].participant_list.selected_users;
+
+        return {createMeeting, participantArr}
+    }
+
+    createMeeting = async (view: any, user: any) => {
         return dbs.Booking.getTransaction(async (transaction: Transaction) => {
-            const values = view.state.values;
-            const blocks = view.blocks;
-
-
-            const createBooking = {
-                user_id: user.id,
-                room_number: values[blocks[1].block_id].room_number.selected_option.value,
-                title: values[blocks[2].block_id].title.value,
-                description: values[blocks[3].block_id].description.value,
-                date: values[blocks[4].block_id].select_date.selected_date,
-                // start: values[blocks[5].block_id].meeting_start.selected_option.value,
-                // end: values[blocks[5].block_id].meeting_end.selected_option.value,
-                state: eBookingState.Booked,
-            }
 
             const participantList: any = [];
-            const participantArr = values[blocks[6].block_id].participant_list.selected_users;
+            const participantArr = this.createMeetingForm(view, user).participantArr;
 
-            const booking = await dbs.Booking.create(createBooking, transaction);
+            const meetingForm = this.createMeetingForm(view, user).createMeeting
+
+
+            const booking = await dbs.Booking.create(meetingForm, transaction);
 
             for (let i = 0; i < participantArr.length; i++) {
 
@@ -109,7 +117,7 @@ class meetingController {
 
             const result = await dbs.Participant.bulkCreate(participantList, transaction);
 
-            await slackController.sendDm(participantArr, user, createBooking);
+            await slackController.sendDm(participantArr, user, meetingForm);
         })
 
 
@@ -146,10 +154,10 @@ class meetingController {
                 room_number: values[blocks[1].block_id].room_number.selected_option.value,
                 title: values[blocks[2].block_id].title.value,
                 description: values[blocks[3].block_id].description.value,
-                date: values[blocks[4].block_id].date.selected_date,
-                start: values[blocks[5].block_id].start.selected_option.value,
-                end: values[blocks[5].block_id].end.selected_option.value,
-                state: eBookingState.Modified,
+                date: values[blocks[4].block_id].selected_date.selected_date,
+                // start: values[blocks[5].block_id].start.selected_option.value,
+                // end: values[blocks[5].block_id].end.selected_option.value,
+                // state: eBookingState.Modified,
             }
 
             const participantList: any = [];
@@ -172,7 +180,7 @@ class meetingController {
 
             // throw new Error()
             console.log(participantList)
-            await dbs.Participant.destroy({booking_id:booking_id});
+            await dbs.Participant.destroy({booking_id: booking_id});
 
             const result = await dbs.Participant.bulkCreate(participantList, transaction);
 
