@@ -2,22 +2,22 @@ import Model from '../../../_base/model';
 import {DataTypes, Sequelize, Transaction} from 'sequelize';
 import {dbs} from '../../../../commons/globals';
 
-class BookingModel extends Model {
+class MeetingModel extends Model {
     protected initialize(): void {
-        this.name = 'booking'
+        this.name = 'meeting'
         this.attributes = {
             user_id: {type: DataTypes.STRING, allowNull: false},
             room_number: {type: DataTypes.INTEGER},
             title: {type: DataTypes.STRING},
             description: {type: DataTypes.STRING},
-            date: {type: DataTypes.STRING},
-            start: {type: DataTypes.INTEGER},
-            end: {type: DataTypes.INTEGER},
+            date: {type: DataTypes.DATE},
+            start: {type: DataTypes.TIME},
+            end: {type: DataTypes.TIME},
         }
     }
 
     async afterSync(): Promise<void> {
-        this.model.hasMany(dbs.Participant.model, {sourceKey: 'id', foreignKey: 'booking_id'});
+        this.model.hasMany(dbs.Participant.model, {sourceKey: 'id', foreignKey: 'meeting_id'});
     }
 
     async meetingInfo(meeting_id: string) {
@@ -27,13 +27,13 @@ class BookingModel extends Model {
         return result;
     }
 
-    async hasBookingOnDate(date: any, roomNumber:number) {
+    async hasMeetingOnDate(date: any, roomNumber:number) {
         const result = await this.findAll({date: date, room_number:roomNumber});
 
         return result;
     }
 
-    async hasBookingAtTime(time: string) {
+    async hasMeetingAtTime(time: string) {
         const result = await this.findAll({start: time});
         return result;
     }
@@ -41,4 +41,4 @@ class BookingModel extends Model {
 }
 
 
-export default (rdb: Sequelize) => new BookingModel(rdb);
+export default (rdb: Sequelize) => new MeetingModel(rdb);

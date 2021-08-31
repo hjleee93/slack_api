@@ -31,10 +31,10 @@ class BlockManager {
             return {
                 "text": {
                     "type": "plain_text",
-                    "text": room,
+                    "text": `${room}`,
                     "emoji": true
                 },
-                "value": room
+                "value": `${room}`
             }
         })
 
@@ -229,10 +229,11 @@ class BlockManager {
     }
 
 
-    meetingModal(initData?: any, meetings?: any) {
+    meetingModal() {
 
         const modal = {
             type: 'modal',
+            notify_on_close: true,
             "title":
                 {
                     "type":
@@ -275,31 +276,15 @@ class BlockManager {
                             "emoji": true
                         },
                         "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "302",
-                                    "emoji": true
-                                },
-                                "value": "302"
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "402",
-                                    "emoji": true
-                                },
-                                "value": "402"
-                            },
-
+                             ...this.meetingRoom()
                         ],
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": '302',
+                                "text": `${this.meetingRoom()[0].value}`,
                                 "emoji": true
                             },
-                            "value": '302'
+                            "value": `${this.meetingRoom()[0].value}`
                         },
                         "action_id": "room_number"
                     },
@@ -355,41 +340,78 @@ class BlockManager {
                 },
                 {
                     "type": "actions",
-                    // dispatch_action: true,
                     "elements": [
                         {
                             "type": "static_select",
                             "placeholder": {
                                 "type": "plain_text",
-                                "text": "회의 시작 시각",
+                                "text": "기간",
                                 "emoji": true
                             },
                             "options": [
-                                ...this.startTime
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `15분`,
+                                        "emoji": true
+                                    },
+                                    "value": `15`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `30분`,
+                                        "emoji": true
+                                    },
+                                    "value": `30`
+                                },
+
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `45분`,
+                                        "emoji": true
+                                    },
+                                    "value": `45`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `1시간`,
+                                        "emoji": true
+                                    },
+                                    "value": `60`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `1시간 30분`,
+                                        "emoji": true
+                                    },
+                                    "value": `90`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `2시간`,
+                                        "emoji": true
+                                    },
+                                    "value": `120`
+                                }
 
                             ],
-                            //todo:오늘 날짜기준으로 시간 다시 맞춰야함
-                            "initial_option": {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": `${this.startTime[0].value}:00`,
-                                    "emoji": true
-                                },
-                                "value": `${this.startTime[0].value}`
-                            },
-                            "action_id": "meeting_start"
+                            "action_id": "meeting_duration"
                         },
                         //회의 끝
                         {
                             "type": "static_select",
                             "placeholder": {
                                 "type": "plain_text",
-                                "text": "회의 종료 시각",
+                                "text": "사용 가능한 시간",
                                 "emoji": true
                             },
                             "options": [
-                                // ...this.endTime
-                                // ...startTimeList
+
                                 ...this.endTime
                             ],
                             "initial_option": {

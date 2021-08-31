@@ -7,12 +7,12 @@ class ParticipantModel extends Model {
         this.name = 'participant'
         this.attributes = {
             user_id: {type: DataTypes.STRING, allowNull: false},
-            booking_id: {type: DataTypes.INTEGER, allowNull: false}
+            meeting_id: {type: DataTypes.INTEGER, allowNull: false}
         }
     }
 
     async afterSync(): Promise<void> {
-        this.model.belongsTo(dbs.Booking.model, {foreignKey: 'booking_id', targetKey: 'id'});
+        this.model.belongsTo(dbs.Meeting.model, {foreignKey: 'meeting_id', targetKey: 'id'});
     }
 
 

@@ -3,7 +3,6 @@ import * as moment from 'moment-timezone';
 import axios from "axios"
 import slackConfig from "../../config/slack";
 import qs from "qs";
-import {eBookingState} from "../commons/enums";
 import slackController from "./slackController";
 import {dbs} from "../commons/globals";
 import {Transaction} from "sequelize";
@@ -13,7 +12,7 @@ class meetingController {
 
     meetingList = async (user: any, trigger_id: any, clickedType?: string) => {
 
-        const meetingList = await dbs.Booking.findAll({user_id: user.id})
+        const meetingList = await dbs.Meeting.findAll({user_id: user.id})
 
         //@ts-ignore
         const list = meetingList.sort((a: any, b: any) => new Date(b.date) - new Date(a.date));
@@ -82,7 +81,7 @@ class meetingController {
     }
 
     createMeeting = async (view: any, user: any) => {
-        return dbs.Booking.getTransaction(async (transaction: Transaction) => {
+        return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
 
             const participantList: any = [];
             const participantArr = this.createMeetingForm(view, user).participantArr;
@@ -90,13 +89,13 @@ class meetingController {
             const meetingForm = this.createMeetingForm(view, user).createMeeting
 
 
-            const booking = await dbs.Booking.create(meetingForm, transaction);
+            const meeting = await dbs.Meeting.create(meetingForm, transaction);
 
             for (let i = 0; i < participantArr.length; i++) {
 
                 let obj = {
                     user_id: participantArr[i],
-                    booking_id: booking.id
+                    meeting_id: meeting.id
                     // name:view.username
                 }
                 participantList.push(obj)
@@ -105,7 +104,7 @@ class meetingController {
             participantList.push(
                 {
                     user_id: user.id,
-                    booking_id: booking.id
+                    meeting_id: meeting.id
                     // name:user.username
                 }
             )
@@ -124,29 +123,29 @@ class meetingController {
     // }
 
 
-    deleteMeeting = async (booking_id: string, user: any, trigger_id: string) => {
-        const deleteMeeting = await dbs.Booking.destroy({id: booking_id})
+    deleteMeeting = async (meeting_id: string, user: any, trigger_id: string) => {
+        const deleteMeeting = await dbs.Meeting.destroy({id: meeting_id})
 
 
         return deleteMeeting
 
     }
 
-    getMeetingInfo = async (booking_id: string, user: any) => {
+    getMeetingInfo = async (meeting_id: string, user: any) => {
 
-        const meeting = await dbs.Booking.findOne({id: booking_id});
+        const meeting = await dbs.Meeting.findOne({id: meeting_id});
         return meeting;
 
     }
 
-    editBooking = async (view: any, booking_id: any, user: any) => {
+    editMeeting = async (view: any, meeting_id: any, user: any) => {
 
-        return dbs.Booking.getTransaction(async (transaction: Transaction) => {
+        return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
             const values = view.state.values;
             const blocks = view.blocks;
 
 
-            const bookingInfo = {
+            const meetingInfo = {
                 room_number: values[blocks[1].block_id].room_number.selected_option.value,
                 title: values[blocks[2].block_id].title.value,
                 description: values[blocks[3].block_id].description.value,
@@ -160,14 +159,14 @@ class meetingController {
             const participantArr = values[blocks[6].block_id].participant_list.selected_users;
 
 
-            const booking = await dbs.Booking.update(bookingInfo, {id: booking_id}, transaction);
+            const meeting = await dbs.Meeting.update(meetingInfo, {id: meeting_id}, transaction);
 
 
             for (let i = 0; i < participantArr.length; i++) {
 
                 let obj = {
                     user_id: participantArr[i],
-                    booking_id: booking_id
+                    meeting_id: meeting_id
                     // name:view.username
                 }
                 participantList.push(obj)
@@ -176,7 +175,7 @@ class meetingController {
 
             // throw new Error()
             console.log(participantList)
-            await dbs.Participant.destroy({booking_id: booking_id});
+            await dbs.Participant.destroy({meeting_id: meeting_id});
 
             const result = await dbs.Participant.bulkCreate(participantList, transaction);
 
