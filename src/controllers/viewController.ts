@@ -1,34 +1,39 @@
+import * as _ from "lodash";
+
 class viewController {
 
+    private baseTime: any[] = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
     private availTime: any[] = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
     setStartTime(timeList?: any[]) {
         const blocks: any[] = [];
-        const startTime = this.startTime(timeList || this.availTime)
+        this.availTime = timeList ? this.startTime(timeList): this.baseTime
 
 
-        for (let i = 0; i < startTime.length - 1; i++) {
+        for (let i = 0; i < this.availTime.length; i++) {
             blocks.push({
                 "text": {
                     "type": "plain_text",
-                    "text": `${startTime[i]}:00`,
+                    "text": `${this.availTime[i]}:00`,
                     "emoji": true
                 },
-                "value": `${startTime[i]}`
+                "value": `${this.availTime[i]}`
             })
         }
         return blocks
     }
 
-    setEndTime(startTime?: number) {
+    setEndTime(startTime?: number, endTimeArr?: any[]) {
         const blocks: any[] = [];
-        let endTimeList =  this.availTime;
+        let endTimeList =  endTimeArr? endTimeArr:this.availTime;
+
         if(startTime) {
-            const index = this.availTime.findIndex(elem => {
+            const index = endTimeList.findIndex(elem => {
                 return elem == startTime;
             });
-            endTimeList = this.availTime.slice(index)
-
+            if(index !== -1){
+                endTimeList = endTimeList.slice(index);
+            }
         }
 
 
@@ -36,10 +41,10 @@ class viewController {
             blocks.push({
                 "text": {
                     "type": "plain_text",
-                    "text": `${endTimeList[i]}:00`,
+                    "text": `${endTimeList[i].value || endTimeList[i]}:00`,
                     "emoji": true
                 },
-                "value": `${endTimeList[i]}`
+                "value": `${ endTimeList[i].value || endTimeList[i] }`
             })
         }
 
@@ -48,18 +53,21 @@ class viewController {
     }
 
     startTime(timeList: any[]) {
-        return this.availTime.filter(x => !timeList.includes(x.toString()));
+        this.baseTime = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+        let result:any[] = [];
+
+        _.forEach(timeList, (list: any) => {
+            let start = this.baseTime.indexOf(parseInt(list.start))
+            let end = this.baseTime.indexOf(parseInt(list.end))
+            let occupied = this.baseTime.slice(start, end)
+            result = result.concat(...occupied)
+        })
+
+        return this.baseTime.filter(x => !result.includes(x));
     }
 
-    // endTime(time: number) {
-    //
-    //     const index:number = this.availTime.findIndex(elem => {
-    //         return elem == time;
-    //     });
-    //
-    //     this.setEndTime(this.availTime.slice(index))
-    //
-    // }
+
+
 
 
 }

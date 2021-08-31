@@ -7,7 +7,6 @@ import {eBookingState} from "../commons/enums";
 import slackController from "./slackController";
 import {dbs} from "../commons/globals";
 import {Transaction} from "sequelize";
-import {forEach} from "lodash";
 
 
 class meetingController {
@@ -66,8 +65,6 @@ class meetingController {
     createMeetingForm(view: any, user: any) {
         const values = view.state.values;
         const blocks = view.blocks;
-
-
 
         const createMeeting = {
             user_id: user.id,

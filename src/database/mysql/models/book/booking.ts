@@ -7,7 +7,7 @@ class BookingModel extends Model {
         this.name = 'booking'
         this.attributes = {
             user_id: {type: DataTypes.STRING, allowNull: false},
-            room_number: {type: DataTypes.STRING},
+            room_number: {type: DataTypes.INTEGER},
             title: {type: DataTypes.STRING},
             description: {type: DataTypes.STRING},
             date: {type: DataTypes.STRING},
@@ -20,21 +20,21 @@ class BookingModel extends Model {
         this.model.hasMany(dbs.Participant.model, {sourceKey: 'id', foreignKey: 'booking_id'});
     }
 
-    async meetingInfo(meeting_id: string){
+    async meetingInfo(meeting_id: string) {
         const result = await this.findOne({
-            id:meeting_id
+            id: meeting_id
         })
         return result;
     }
 
-    async hasBookingOnDate(date: any){
-        const result = await this.findAll({date:date});
+    async hasBookingOnDate(date: any, roomNumber:number) {
+        const result = await this.findAll({date: date, room_number:roomNumber});
 
         return result;
     }
 
-    async hasBookingAtTime(time: string){
-        const result = await this.findAll({start:time});
+    async hasBookingAtTime(time: string) {
+        const result = await this.findAll({start: time});
         return result;
     }
 

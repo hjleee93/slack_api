@@ -24,7 +24,7 @@ class slackController {
     private bookingId: number = 0;
     private startTime = viewController.setStartTime();
     private endTime = viewController.setEndTime();
-    private bookedMeetings !:any;
+    private bookedMeetings !: any;
 
 
     event = async (req: any, res: any) => {
@@ -47,23 +47,21 @@ class slackController {
 
         const {token, trigger_id, user, actions, type, container} = JSON.parse(req.body.payload);
         const payload = JSON.parse(req.body.payload);
-        //modal submission8
+
+        //modal submission
         if (type === 'view_submission') {
 
-
             const submitType = payload.view.submit.text
-            if (submitType === 'Edit') {
+
+            if (submitType.toLowerCase() === 'edit') {
                 await meetingController.editBooking(payload.view, this.bookingId, user)
                 res.send(booking_edit_done_modal)
-            }
-            else {
+            } else {
                 await meetingController.createMeeting(payload.view, user);
-                console.log
-                (booking_done_modal)
                 res.send(booking_done_modal)
             }
-
         }
+
         if (actions && actions[0].action_id.match(/work_start/)) {
 
             try {
@@ -72,16 +70,12 @@ class slackController {
             } catch (e) {
                 res.sendStatus(500);
             }
-
-
-        }
-        else if (actions && actions[0].action_id.match(/work_end/)) {
+        } else if (actions && actions[0].action_id.match(/work_end/)) {
             await workController.workEnd(user, trigger_id)
             res.sendStatus(200);
-        }
-        else if (actions && actions[0].action_id.match(/work_history/)) {
+        } else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
-            const result = await workController.workHistory(user, historyDuration, trigger_id);
+            const result = await workController.workHistory(user, historyDuration);
 
             const history_block = [
                 ...blockManager.workSection(),
@@ -97,7 +91,7 @@ class slackController {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*--------------------------------------------------------------------*\n          *날짜         |          출근 시간          |          퇴근 시간          *\n*--------------------------------------------------------------------*"
+                        "text": "*-------------------------------------------------------------------------*\n          *날짜         |          출근 시간          |          퇴근 시간          *\n*-------------------------------------------------------------------------*"
                     }
                 },
                 ...result,
@@ -108,17 +102,19 @@ class slackController {
 
             ]
 
-            await this.displayHome(user.id, history_block)
+            const response = await this.displayHome(user, history_block);
+
+            if (response.data.error) {
+                res.sendStatus(500)
+            } else {
+                res.sendStatus(200);
+            }
+
+        } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
+            await this.openMeetingModal(trigger_id);
             res.sendStatus(200);
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_booking/)) {
-            await this.openModal(trigger_id);
-            // this.bookingId
-            res.sendStatus(200);
-
-        }
-        else if (actions && actions[0].action_id.match(/meeting_list/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_list/)) {
             const clickedType = actions[0].value
             const result = await meetingController.meetingList(user, trigger_id, clickedType)
 
@@ -131,24 +127,20 @@ class slackController {
                 ...result
 
             ]
-            await this.displayHome(user.id, list_block)
+            await this.displayHome(user, list_block)
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_edit/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_edit/)) {
 
             const booking_id = actions[0].value;
             const bookingInfo = await meetingController.getMeetingInfo(booking_id, user);
 
             await this.openEditModal(trigger_id, bookingInfo);
 
-        }
-        else if (actions && actions[0].action_id.match(/selected_date/)) {
+        } else if (actions && actions[0].action_id.match(/selected_date/)) {
 
             const selected_date = actions[0].selected_date;
-
-            this.bookedMeetings = await dbs.Booking.hasBookingOnDate(selected_date)
             const modalForm = meetingController.createMeetingForm(payload.view, user).createMeeting
-
+            this.bookedMeetings = await dbs.Booking.hasBookingOnDate(selected_date, modalForm.room_number)
 
 
             // this.startTime = viewController.setStartTime(timeList)
@@ -157,7 +149,7 @@ class slackController {
 
 
             // blockManager(meetingInfo, userIdList)
-
+            0
             // const modal = {
             //     type: 'modal',
             //     "title":
@@ -345,20 +337,18 @@ class slackController {
 
             res.sendStatus(200);
 
-        }
-        else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
+        } else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
 
             const meeting_id = actions[0].selected_option.value
 
             if (actions[0].selected_option.text.text.toLowerCase() === 'edit') {
                 const meetingInfo = await dbs.Booking.meetingInfo(meeting_id);
                 await this.openEditModal(trigger_id, meetingInfo);
-            }
-            else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
+            } else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
 
                 const result = await meetingController.deleteMeeting(meeting_id, user, trigger_id)
                 if (result === 1) {
-                    await workTimeController.openModal(trigger_id, '해당 예약은 삭제되었습니다.');
+                    await blockManager.openConfirmModal(trigger_id, '해당 예약은 삭제되었습니다.');
                 }
 
                 const result1 = await meetingController.meetingList(user, trigger_id)
@@ -371,17 +361,15 @@ class slackController {
                     ...result1
 
                 ]
-                await this.displayHome(user.id, list_block)
+                await this.displayHome(user, list_block)
                 res.sendStatus(200);
 
             }
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_start/)) {
-            const endTimeList = viewController.setEndTime(actions[0].selected_option.value)
+        } else if (actions && actions[0].action_id.match(/meeting_start/)) {
             const modalForm = meetingController.createMeetingForm(payload.view, user).createMeeting
 
-            const modal = blockManager.updateMeetingModal(modalForm, this.bookedMeetings)
+            const modal = blockManager.updateEndTimeModal(modalForm, this.bookedMeetings, actions[0].selected_option.value)
 
             const args = {
                 token: slackConfig.token,
@@ -393,8 +381,7 @@ class slackController {
 
             console.log(result)
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_end/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_end/)) {
 
 
         }
@@ -402,16 +389,17 @@ class slackController {
 
     }
 
-    displayHome = async (user: any, block: any, data?: any,) => {
+    displayHome = async (user: any, block: any) => {
 
         const args = {
             token: slackConfig.token,
-            user_id: user,
+            user_id: user.id,
             view: await this.updateView(user, block)
         };
 
-        const result = await axios.post('https://slack.com/api/views.publish', qs.stringify(args));
 
+
+        return await axios.post('https://slack.com/api/views.publish', qs.stringify(args));
     };
 
     updateView = async (user: any, blocks: any) => {
@@ -420,7 +408,7 @@ class slackController {
             type: 'home',
             title: {
                 type: 'plain_text',
-                text: 'Keep notes!'
+                text: 'FTR'
             },
             blocks: blocks
         }
@@ -429,8 +417,7 @@ class slackController {
     };
 
 
-    openModal = async (trigger_id: any) => {
-
+    openMeetingModal = async (trigger_id: any) => {
 
         const modal = blockManager.meetingModal()
 
