@@ -24,7 +24,7 @@ class workTimeController {
                 user_id,
                 start: moment().format('YYYY-MM-DDTHH:mm:ss')
             }
-            const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id)
+            const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id, transaction)
 
             if (!isWorkStart) {
                 if (!dbs.User.findUser(user_id)) {
@@ -32,7 +32,7 @@ class workTimeController {
                 }
 
                 await dbs.WorkLog.create(workStart, transaction)
-                await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
+                 await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
             }
             else {
                 await blockManager.openConfirmModal(trigger_id, '이미 출근처리되었습니다.');

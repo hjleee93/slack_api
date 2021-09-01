@@ -3,54 +3,24 @@ import viewController from "../controllers/viewController";
 import * as _ from "lodash";
 import slackConfig from "../../config/slack";
 import axios from "axios";
-import qs from "qs";
+import * as qs from "qs";
+import timeManager from "./timeManager";
 
 class BlockManager {
     private startTime = viewController.setStartTime();
     private endTime = viewController.setEndTime();
+    public  meetingRoomArr = [302, 402];
 
     openConfirmModal = async (trigger_id: any, text: string) => {
-
-        const modal = this.confirmModal(text)
-
-        const args = {
-            token: slackConfig.token,
-            trigger_id: trigger_id,
-            view: JSON.stringify(modal)
-        };
-
-        await axios.post('https://slack.com/api/views.open', qs.stringify(args));
-
-    };
-
-    meetingRoom(){
-        const meetingRoomArr = [302, 402];
-
-        const result = _.map(meetingRoomArr, (room: any) => {
-
-            return {
-                "text": {
-                    "type": "plain_text",
-                    "text": `${room}`,
-                    "emoji": true
-                },
-                "value": `${room}`
-            }
-        })
-
-        return result;
-    }
-    confirmModal(text: string) {
 
         const blocks =
             {
                 "type": "modal",
                 "title": {
                     "type": "plain_text",
-                    "text": "My App",
+                    "text": "FTR",
                     "emoji": true
                 },
-
                 "close": {
                     "type": "plain_text",
                     "text": "ok",
@@ -70,8 +40,32 @@ class BlockManager {
             }
 
 
-        return blocks;
+        const args = {
+            token: slackConfig.token,
+            trigger_id: trigger_id,
+            view: JSON.stringify(blocks)
+        };
+        console.log(args)
 
+        await axios.post('https://slack.com/api/views.open', qs.stringify(args));
+
+    };
+
+    meetingRoom() {
+
+        const result = _.map(this.meetingRoomArr, (room: any) => {
+
+            return {
+                "text": {
+                    "type": "plain_text",
+                    "text": `${room}`,
+                    "emoji": true
+                },
+                "value": `${room}`
+            }
+        })
+
+        return result;
     }
 
     dmJson(meetingInfo: any) {
@@ -228,8 +222,13 @@ class BlockManager {
 
     }
 
-
     meetingModal() {
+        const currTime = moment()
+        //시간 반올림
+        const remainder = 15 - currTime.minute() % 15
+
+        //현재 시간 이후로만 예약가능
+        const timeList = timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'])
 
         const modal = {
             type: 'modal',
@@ -242,8 +241,7 @@ class BlockManager {
                         "회의실 예약",
                     "emoji":
                         true
-                }
-            ,
+                },
             "submit":
                 {
                     "type":
@@ -276,7 +274,7 @@ class BlockManager {
                             "emoji": true
                         },
                         "options": [
-                             ...this.meetingRoom()
+                            ...this.meetingRoom()
                         ],
                         "initial_option": {
                             "text": {
@@ -296,25 +294,37 @@ class BlockManager {
                 },
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
-                        "action_id": "title",
-                        "initial_value": ' '
+                        "initial_value": ' ',
+                        "action_id": "meeting_title",
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        }
                     },
                     "label": {
                         "type": "plain_text",
                         "text": "안건",
                         "emoji": true
-                    }
+                    },
+
                 },
                 {
                     "type": "input",
-
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "multiline": true,
                         "action_id": "description",
-                        "initial_value": ' '
+                        "initial_value": ' ',
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        }
 
                     },
                     "label": {
@@ -400,9 +410,17 @@ class BlockManager {
                                 }
 
                             ],
+                            "initial_option": {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": `30분`,
+                                    "emoji": true
+                                },
+                                "value": `30`
+                            },
                             "action_id": "meeting_duration"
                         },
-                        //회의 끝
+
                         {
                             "type": "static_select",
                             "placeholder": {
@@ -411,17 +429,16 @@ class BlockManager {
                                 "emoji": true
                             },
                             "options": [
-
-                                ...this.endTime
+                                ...timeList
                             ],
-                            "initial_option": {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": `${this.endTime[0].value}:00`,
-                                    "emoji": true
-                                },
-                                "value": `${this.endTime[0].value}`
-                            },
+                            // "initial_option": {
+                            //     "text": {
+                            //         "type": "plain_text",
+                            //         "text": `${this.endTime[0].value}:00`,
+                            //         "emoji": true
+                            //     },
+                            //     "value": `${this.endTime[0].value}`
+                            // },
                             "action_id": "meeting_end"
                         }
                     ]
@@ -429,6 +446,7 @@ class BlockManager {
                 //참석자
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "multi_users_select",
                         "placeholder": {
@@ -471,8 +489,8 @@ class BlockManager {
         startTimeList = viewController.setStartTime(timeList)
         endTimeList = viewController.setEndTime(startTimeList[0].value, startTimeList)
 
-        if(!startTimeList.includes(initData.start)){
-         initData.start =    startTimeList[0].value
+        if (!startTimeList.includes(initData.start)) {
+            initData.start = startTimeList[0].value
         }
 
 
@@ -693,8 +711,8 @@ class BlockManager {
         startTimeList = viewController.setStartTime(timeList)
         endTimeList = viewController.setEndTime(startTime)
 
-        if(!startTimeList.includes(initData.start)){
-            initData.start =  startTimeList[0].value
+        if (!startTimeList.includes(initData.start)) {
+            initData.start = startTimeList[0].value
         }
 
 
@@ -894,6 +912,232 @@ class BlockManager {
         }
 
         return modal;
+    }
+
+
+    availTimeList(initData: any, timeList: any[]) {
+
+        console.log(initData.members, [' '])
+
+        const modal = {
+            type: 'modal',
+            notify_on_close: true,
+            "title":
+                {
+                    "type":
+                        "plain_text",
+                    "text":
+                        "회의실 예약",
+                    "emoji":
+                        true
+                }
+            ,
+            "submit":
+                {
+                    "type":
+                        "plain_text",
+                    "text":
+                        "Submit",
+                    "emoji":
+                        true
+                }
+            ,
+            "close":
+                {
+                    "type":
+                        "plain_text",
+                    "text":
+                        "Cancel",
+                    "emoji":
+                        true
+                }
+            ,
+            blocks: [
+                {
+                    "type": "input",
+                    dispatch_action: true,
+                    "element": {
+                        "type": "static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select an item",
+                            "emoji": true
+                        },
+                        "options": [
+                            ...this.meetingRoom()
+                        ],
+                        "initial_option": {
+                            "text": {
+                                "type": "plain_text",
+                                "text": `${initData.roomNumber}`,
+                                "emoji": true
+                            },
+                            "value": `${initData.roomNumber}`
+                        },
+                        "action_id": "room_number"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "회의실",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "title",
+                        "initial_value": `${initData.title}`
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "안건",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "input",
+
+                    "element": {
+                        "type": "plain_text_input",
+                        "multiline": true,
+                        "action_id": "description",
+                        "initial_value": `${initData.description}`
+
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "자세히",
+                        "emoji": true
+                    },
+                    "optional": true
+                },
+                {
+                    "type": "input",
+                    dispatch_action: true,
+                    "element": {
+                        "type": "datepicker",
+                        "initial_date": initData.date,
+                        "action_id": "selected_date"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "미팅 할 날짜",
+                        "emoji": true
+                    }
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "static_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "기간",
+                                "emoji": true
+                            },
+                            "options": [
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `15분`,
+                                        "emoji": true
+                                    },
+                                    "value": `15`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `30분`,
+                                        "emoji": true
+                                    },
+                                    "value": `30`
+                                },
+
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `45분`,
+                                        "emoji": true
+                                    },
+                                    "value": `45`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `1시간`,
+                                        "emoji": true
+                                    },
+                                    "value": `60`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `1시간 30분`,
+                                        "emoji": true
+                                    },
+                                    "value": `90`
+                                },
+                                {
+                                    "text": {
+                                        "type": "plain_text",
+                                        "text": `2시간`,
+                                        "emoji": true
+                                    },
+                                    "value": `120`
+                                }
+
+                            ],
+                            initial_option: {
+                                "text": {
+                                    "type": "plain_text",
+                                    "text": `${initData.duration}분`,
+                                    "emoji": true
+                                },
+                                "value": `${initData.duration}`
+                            },
+                            "action_id": "meeting_duration"
+                        },
+                        //회의 끝
+                        {
+                            "type": "static_select",
+                            "placeholder": {
+                                "type": "plain_text",
+                                "text": "사용 가능한 시간",
+                                "emoji": true
+                            },
+                            "options": [...timeList],
+                            "action_id": "meeting_end"
+                        }
+                    ]
+                },
+                //참석자
+                {
+                    "type": "input",
+                    "element": {
+                        "type": "multi_users_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select users",
+                            "emoji": true
+                        },
+                        "action_id": "participant_list",
+//todo:모달 초기에 유저 이름 넣어두자
+                        initial_users: `${initData.members}`
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "미팅 참여자",
+                        "emoji": true
+                    }
+                },
+
+            ]
+        }
+
+        return modal
+
+
     }
 
 }

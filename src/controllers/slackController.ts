@@ -14,38 +14,41 @@ import {dbs} from "../commons/globals";
 import * as meeting_done_modal from "../json/booking_done_modal.json";
 import * as meeting_edit_done_modal from "../json/booking_edit_done_modal.json";
 import blockManager from "../sevices/blockManager";
+import timeManager from "../sevices/timeManager";
 
 
 const qs = require('qs');
 
+
 class slackController {
+
     private meetingData = {
-        id: null,
-        roomNumber: null,
-        title: null,
-        description: null,
+        id: '',
+        roomNumber: blockManager.meetingRoomArr[0],
+        title: ' ',
+        description: ' ',
         date: moment().format('yyyy-MM-DD'),
-        duration: null,
-        start: null,
-        end: null,
+        duration: 30,
+        start: ' ',
+        end: ' ',
         members: []
     }
 
-    private businessTime = ['10:00','19:00']
+    private businessTime = ['10:00', '19:00']
     private startTime = viewController.setStartTime();
     private endTime = viewController.setEndTime();
     private bookedMeetings !: any;
 
     initData() {
         this.meetingData = {
-            id: null,
-            roomNumber: null,
-            title: null,
-            description: null,
+            id: ' ',
+            roomNumber: blockManager.meetingRoomArr[0],
+            title: ' ',
+            description: ' ',
             date: moment().format('yyyy-MM-DD'),
-            duration: null,
-            start: null,
-            end: null,
+            duration: 30,
+            start: ' ',
+            end: ' ',
             members: []
         }
 
@@ -54,6 +57,7 @@ class slackController {
 
 
     event = async (req: any, res: any) => {
+
         res.send(req.body)
         const {type, user, channel, tab, text, subtype} = req.body.event;
         if (type === 'app_home_opened') {
@@ -82,13 +86,11 @@ class slackController {
             if (submitType.toLowerCase() === 'edit') {
                 await meetingController.editMeeting(payload.view, this.meetingData.id, user)
                 res.send(meeting_edit_done_modal)
-            }
-            else {
+            } else {
                 await meetingController.createMeeting(payload.view, user);
                 res.send(meeting_done_modal)
             }
-        }
-        else if (type === "view_closed") {
+        } else if (type === "view_closed") {
             this.initData();
         }
 
@@ -100,8 +102,7 @@ class slackController {
             } catch (e) {
                 res.sendStatus(500);
             }
-        }
-        else if (actions && actions[0].action_id.match(/work_end/)) {
+        } else if (actions && actions[0].action_id.match(/work_end/)) {
             await workController.workEnd(user, trigger_id)
             res.sendStatus(200);
         }
@@ -138,8 +139,7 @@ class slackController {
 
             if (response.data.error) {
                 res.sendStatus(500)
-            }
-            else {
+            } else {
                 res.sendStatus(200);
             }
 
@@ -172,6 +172,18 @@ class slackController {
 
             await this.openEditModal(trigger_id, meetingInfo);
 
+        }
+        else if(actions && actions[0].action_id.match(/room_number/)) {
+            this.meetingData.roomNumber = actions[0].selected_option.value;
+            res.sendStatus(200);
+        }
+        else if(actions && actions[0].action_id.match(/meeting_title/)){
+            this.meetingData.title = actions[0].value
+            res.sendStatus(200);
+        }
+        else if(actions && actions[0].action_id.match(/description/)){
+            this.meetingData.description = actions[0].value
+            res.sendStatus(200);
         }
         else if (actions && actions[0].action_id.match(/selected_date/)) {
             this.meetingData.date = actions[0].selected_date;
@@ -377,15 +389,18 @@ class slackController {
 
         }
         else if (actions && actions[0].action_id.match(/meeting_duration/)) {
-            this.meetingData.duration=  actions[0].selected_option.value;
-            const duration = this.meetingData.duration;
-         // console.log(moment().add(90, 'm').format("HH:mm"))
-            console.log(this.meetingData.date + 'T'+this.businessTime[0])
-const time = moment(this.meetingData.date + 'T'+this.businessTime[0]).add(duration,'m').format('HH:mm')
-            console.log(time)
+            this.meetingData.duration = actions[0].selected_option.value;
+            const result = timeManager.timeList(this.meetingData.duration, this.businessTime)
+            const modal = blockManager.availTimeList(this.meetingData, result)
 
 
-            // console.log(this.meetingData.date)
+            const args = {
+                token: slackConfig.token,
+                view: JSON.stringify(modal),
+                view_id: container.view_id
+            };
+
+          console.log(  await axios.post('https://slack.com/api/views.update', qs.stringify(args)))
 
         }
         else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
@@ -395,8 +410,7 @@ const time = moment(this.meetingData.date + 'T'+this.businessTime[0]).add(durati
             if (actions[0].selected_option.text.text.toLowerCase() === 'edit') {
                 const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
                 await this.openEditModal(trigger_id, meetingInfo);
-            }
-            else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
+            } else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
 
                 const result = await meetingController.deleteMeeting(meeting_id, user, trigger_id)
                 if (result === 1) {
@@ -439,6 +453,11 @@ const time = moment(this.meetingData.date + 'T'+this.businessTime[0]).add(durati
 
 
         }
+        else if (actions && actions[0].action_id.match(/participant_list/)) {
+            this.meetingData.members = actions[0].selected_users
+            res.sendStatus(200);
+        }
+
 
 
     }
@@ -474,7 +493,6 @@ const time = moment(this.meetingData.date + 'T'+this.businessTime[0]).add(durati
     openMeetingModal = async (trigger_id: any) => {
 
         const modal = blockManager.meetingModal()
-
 
         const args = {
             token: slackConfig.token,
