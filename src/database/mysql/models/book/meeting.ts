@@ -27,9 +27,8 @@ class MeetingModel extends Model {
         return result;
     }
 
-    async hasMeetingOnDate(date: any, roomNumber:number) {
+    async hasMeetingOnDate(date: Date, roomNumber:string) {
         const result = await this.findAll({date: date, room_number:roomNumber});
-
         return result;
     }
 

@@ -4,26 +4,39 @@ import axios from "axios"
 import slackConfig from "../../config/slack";
 import qs from "qs";
 import slackController from "./slackController";
+import userController from "./userController";
 import {dbs} from "../commons/globals";
 import {Transaction} from "sequelize";
+import blockManager from "../sevices/blockManager";
 
 
 class meetingController {
 
     meetingList = async (user: any, trigger_id: any, clickedType?: string) => {
 
-        const meetingList = await dbs.Meeting.findAll({user_id: user.id})
+        const meetingList = await dbs.Meeting.findAll()
 
         //@ts-ignore
         const list = meetingList.sort((a: any, b: any) => new Date(b.date) - new Date(a.date));
 
-        const result = _.map(list, (meeting: any) => {
+        // const member = await dbs.Participants.findUser()
+        const result = await Promise.all(_.map(list, async (meeting: any) => {
+            const membersObj = await dbs.Participant.findAllUser(meeting.id)
+
+            const memberNameList = await Promise.all(_.map(membersObj, async (member: any) => {
+                const memberInfo = await userController.getUserInfo(member.user_id)
+
+                return memberInfo.data.user.real_name;
+            }))
+
+
+
             if (!meeting.deleted_at) {
                 return {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": `\`${meeting.date}\` \` ${meeting.start}-${meeting.end}\` *${meeting.title}* \n`
+                        "text": `📢*${meeting.title}* \n\n \`\`\`${moment(meeting.date, 'yyyy-MM-DD').format('yyyy-MM-DD')} ${moment(meeting.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meeting.end, 'HH:mm:ss').format("HH:mm")}\`\`\` 참석자 : ${memberNameList}\n\n`
                     },
 
                     "accessory": {
@@ -50,32 +63,32 @@ class meetingController {
 
                             }
                         ]
-                    }
+                    },
+
                 }
+
 
             } else {
                 return null;
             }
-        })
+        }));
 
         return result.filter((element, i) => element !== null);
     }
 
-    createMeetingForm(view: any, user: any) {
-        const values = view.state.values;
-        const blocks = view.blocks;
+    createMeetingForm(data: any, user: any) {
 
         const createMeeting = {
             user_id: user.id,
-            room_number: values[blocks[0].block_id].room_number.selected_option.value,
-            title: values[blocks[1].block_id].title.value,
-            description: values[blocks[2].block_id].description.value,
-            date: values[blocks[3].block_id].selected_date.selected_date,
-            start: values[blocks[4].block_id].meeting_start.selected_option.value,
-            end: values[blocks[4].block_id].meeting_end.selected_option.value,
+            room_number: data.roomNumber,
+            title: data.title,
+            description: data.description,
+            date: data.date,
+            start: data.start,
+            end: data.end,
         }
 
-        const participantArr = values[blocks[5].block_id].participant_list.selected_users;
+        const participantArr = data.members;
 
         return {createMeeting, participantArr}
     }
@@ -83,11 +96,12 @@ class meetingController {
     createMeeting = async (view: any, user: any) => {
         return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
 
+            console.log(view)
+
             const participantList: any = [];
             const participantArr = this.createMeetingForm(view, user).participantArr;
 
-            const meetingForm = this.createMeetingForm(view, user).createMeeting
-
+            const meetingForm = this.createMeetingForm(view, user).createMeeting;
 
             const meeting = await dbs.Meeting.create(meetingForm, transaction);
 
@@ -101,14 +115,7 @@ class meetingController {
                 participantList.push(obj)
             }
 
-            participantList.push(
-                {
-                    user_id: user.id,
-                    meeting_id: meeting.id
-                    // name:user.username
-                }
-            )
-            // throw new Error()
+            // // throw new Error()
 
             const result = await dbs.Participant.bulkCreate(participantList, transaction);
 

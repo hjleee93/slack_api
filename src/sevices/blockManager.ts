@@ -9,7 +9,7 @@ import timeManager from "./timeManager";
 class BlockManager {
     private startTime = viewController.setStartTime();
     private endTime = viewController.setEndTime();
-    public  meetingRoomArr = [302, 402];
+    public meetingRoomArr = [302, 402];
 
     openConfirmModal = async (trigger_id: any, text: string) => {
 
@@ -53,7 +53,7 @@ class BlockManager {
 
     meetingRoom() {
 
-        const result = _.map(this.meetingRoomArr, (room: any) => {
+        const result = _.map(this.meetingRoomArr, (room: number) => {
 
             return {
                 "text": {
@@ -222,14 +222,13 @@ class BlockManager {
 
     }
 
-    meetingModal() {
+    async meetingModal() {
         const currTime = moment()
         //시간 반올림
         const remainder = 15 - currTime.minute() % 15
 
         //현재 시간 이후로만 예약가능
-        const timeList = timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'])
-
+        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'], moment().format('yyyy-MM-DD'),  this.meetingRoom()[0].value)
         const modal = {
             type: 'modal',
             notify_on_close: true,
@@ -915,9 +914,49 @@ class BlockManager {
     }
 
 
-    availTimeList(initData: any, timeList: any[]) {
+  async availTimeList(initData: any, timeList: any[]) {
+        let initMember = {}
+        if (initData.members.length > 0) {
+            initMember = {
+                "type": "input",
+                dispatch_action: true,
+                "element": {
+                    "type": "multi_users_select",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Select users",
+                        "emoji": true
+                    },
+                    "action_id": "participant_list",
+                    initial_users: initData.members
+                },
+                "label": {
+                    "type": "plain_text",
+                    "text": "미팅 참여자",
+                    "emoji": true
+                }
+            }
+        } else {
+            initMember = {
+                "type": "input",
+                dispatch_action: true,
+                "element": {
+                    "type": "multi_users_select",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Select users",
+                        "emoji": true
+                    },
+                    "action_id": "participant_list",
+                },
+                "label": {
+                    "type": "plain_text",
+                    "text": "미팅 참여자",
+                    "emoji": true
+                }
+            }
+        }
 
-        console.log(initData.members, [' '])
 
         const modal = {
             type: 'modal',
@@ -984,10 +1023,16 @@ class BlockManager {
                 },
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
-                        "action_id": "title",
-                        "initial_value": `${initData.title}`
+                        "action_id": "meeting_title",
+                        "initial_value": `${initData.title}`,
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        }
                     },
                     "label": {
                         "type": "plain_text",
@@ -997,13 +1042,17 @@ class BlockManager {
                 },
                 {
                     "type": "input",
-
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "multiline": true,
                         "action_id": "description",
-                        "initial_value": `${initData.description}`
-
+                        "initial_value": `${initData.description}`,
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        }
                     },
                     "label": {
                         "type": "plain_text",
@@ -1043,7 +1092,7 @@ class BlockManager {
                                         "text": `15분`,
                                         "emoji": true
                                     },
-                                    "value": `15`
+                                    "value": '15'
                                 },
                                 {
                                     "text": {
@@ -1051,7 +1100,7 @@ class BlockManager {
                                         "text": `30분`,
                                         "emoji": true
                                     },
-                                    "value": `30`
+                                    "value": '30'
                                 },
 
                                 {
@@ -1060,31 +1109,31 @@ class BlockManager {
                                         "text": `45분`,
                                         "emoji": true
                                     },
-                                    "value": `45`
+                                    "value": '45'
                                 },
                                 {
                                     "text": {
                                         "type": "plain_text",
-                                        "text": `1시간`,
+                                        "text": `60분`,
                                         "emoji": true
                                     },
-                                    "value": `60`
+                                    "value": '60'
                                 },
                                 {
                                     "text": {
                                         "type": "plain_text",
-                                        "text": `1시간 30분`,
+                                        "text": `90분`,
                                         "emoji": true
                                     },
-                                    "value": `90`
+                                    "value": '90'
                                 },
                                 {
                                     "text": {
                                         "type": "plain_text",
-                                        "text": `2시간`,
+                                        "text": `120분`,
                                         "emoji": true
                                     },
-                                    "value": `120`
+                                    "value": '120'
                                 }
 
                             ],
@@ -1112,25 +1161,7 @@ class BlockManager {
                     ]
                 },
                 //참석자
-                {
-                    "type": "input",
-                    "element": {
-                        "type": "multi_users_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select users",
-                            "emoji": true
-                        },
-                        "action_id": "participant_list",
-//todo:모달 초기에 유저 이름 넣어두자
-                        initial_users: `${initData.members}`
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "미팅 참여자",
-                        "emoji": true
-                    }
-                },
+                initMember
 
             ]
         }
@@ -1140,6 +1171,14 @@ class BlockManager {
 
     }
 
+    divider(){
+        return {
+            "type": "divider"
+        }
+    }
+
 }
 
 export default new BlockManager()
+
+//todo:60,90,120분 -> 시간으로 바꾸기

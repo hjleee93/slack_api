@@ -24,7 +24,7 @@ class slackController {
 
     private meetingData = {
         id: '',
-        roomNumber: blockManager.meetingRoomArr[0],
+        roomNumber: blockManager.meetingRoomArr[0].toString(),
         title: ' ',
         description: ' ',
         date: moment().format('yyyy-MM-DD'),
@@ -42,7 +42,7 @@ class slackController {
     initData() {
         this.meetingData = {
             id: ' ',
-            roomNumber: blockManager.meetingRoomArr[0],
+            roomNumber: blockManager.meetingRoomArr[0].toString(),
             title: ' ',
             description: ' ',
             date: moment().format('yyyy-MM-DD'),
@@ -57,6 +57,7 @@ class slackController {
 
 
     event = async (req: any, res: any) => {
+        this.initData();
 
         res.send(req.body)
         const {type, user, channel, tab, text, subtype} = req.body.event;
@@ -78,6 +79,7 @@ class slackController {
         const {token, trigger_id, user, actions, type, container, view} = JSON.parse(req.body.payload);
         const payload = JSON.parse(req.body.payload);
 
+
         //modal submission
         if (type === 'view_submission') {
 
@@ -87,7 +89,8 @@ class slackController {
                 await meetingController.editMeeting(payload.view, this.meetingData.id, user)
                 res.send(meeting_edit_done_modal)
             } else {
-                await meetingController.createMeeting(payload.view, user);
+                await meetingController.createMeeting(this.meetingData, user);
+                // await meetingController.createMeeting(payload.view, user);
                 res.send(meeting_done_modal)
             }
         } else if (type === "view_closed") {
@@ -105,8 +108,7 @@ class slackController {
         } else if (actions && actions[0].action_id.match(/work_end/)) {
             await workController.workEnd(user, trigger_id)
             res.sendStatus(200);
-        }
-        else if (actions && actions[0].action_id.match(/work_history/)) {
+        } else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
             const result = await workController.workHistory(user, historyDuration);
 
@@ -143,255 +145,68 @@ class slackController {
                 res.sendStatus(200);
             }
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_booking/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
             await this.openMeetingModal(trigger_id);
             res.sendStatus(200);
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_list/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_list/)) {
             const clickedType = actions[0].value
             const result = await meetingController.meetingList(user, trigger_id, clickedType)
 
             const list_block = [
                 ...blockManager.workSection(),
-                {
-                    "type": "divider"
-                },
+                blockManager.divider(),
                 ...blockManager.meetingSection(),
-                ...result
+                ...result,
+
 
             ]
             await this.displayHome(user.id, list_block)
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_edit/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_edit/)) {
 
             const meeting_id = actions[0].value;
             const meetingInfo = await meetingController.getMeetingInfo(meeting_id, user);
 
             await this.openEditModal(trigger_id, meetingInfo);
 
-        }
-        else if(actions && actions[0].action_id.match(/room_number/)) {
+        } else if (actions && actions[0].action_id.match(/room_number/)) {
             this.meetingData.roomNumber = actions[0].selected_option.value;
             res.sendStatus(200);
-        }
-        else if(actions && actions[0].action_id.match(/meeting_title/)){
+        } else if (actions && actions[0].action_id.match(/meeting_title/)) {
             this.meetingData.title = actions[0].value
             res.sendStatus(200);
-        }
-        else if(actions && actions[0].action_id.match(/description/)){
+        } else if (actions && actions[0].action_id.match(/description/)) {
             this.meetingData.description = actions[0].value
             res.sendStatus(200);
-        }
-        else if (actions && actions[0].action_id.match(/selected_date/)) {
+        } else if (actions && actions[0].action_id.match(/selected_date/)) {
+            let timeArr = []
+            let result !:any
             this.meetingData.date = actions[0].selected_date;
 
+            //오늘 날짜 선택한 경우
+            const remainder = 15 - moment().minute() % 15
+            if(actions[0].selected_date === moment().format('yyyy-MM-DD')){
 
-            // const modalForm = meetingController.createMeetingForm(payload.view, user).createMeeting
-            // this.bookedMeetings = await dbs.Meeting.hasMeetingOnDate(this.meetingData.date, modalForm.room_number)
-            //
-            //
-            // // this.startTime = viewController.setStartTime(timeList)
-            //
-            // const modal = blockManager.updateMeetingModal(modalForm, this.bookedMeetings)
+                result = timeManager.timeList(this.meetingData.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], this.meetingData.date, this.meetingData.roomNumber)
+            }else{
+                result = timeManager.timeList(this.meetingData.duration, this.businessTime, this.meetingData.date, this.meetingData.roomNumber)
+            }
 
+            const modal =await blockManager.availTimeList(this.meetingData, await result)
 
-            // blockManager(meetingInfo, userIdList)
+            const args = {
+                token: slackConfig.token,
+                view: JSON.stringify(modal),
+                view_id: container.view_id
+            };
 
-            // const modal = {
-            //     type: 'modal',
-            //     "title":
-            //         {
-            //             "type":
-            //                 "plain_text",
-            //             "text":
-            //                 "My App",
-            //             "emoji":
-            //                 true
-            //         }
-            //     ,
-            //     "submit":
-            //         {
-            //             "type":
-            //                 "plain_text",
-            //             "text":
-            //                 "Submit",
-            //             "emoji":
-            //                 true
-            //         }
-            //     ,
-            //     "close":
-            //         {
-            //             "type":
-            //                 "plain_text",
-            //             "text":
-            //                 "Cancel",
-            //             "emoji":
-            //                 true
-            //         }
-            //     ,
-            //     blocks: [
-            //         // Text input
-            //         {
-            //             "type": "section",
-            //             "block_id": "meeting-identifier",
-            //             "text": {
-            //                 "type": "plain_text",
-            //                 "text": "선택부탁",
-            //                 "emoji": true
-            //             }
-            //         },
-            //         {
-            //             "type": "input",
-            //             "element": {
-            //                 "type": "static_select",
-            //                 "placeholder": {
-            //                     "type": "plain_text",
-            //                     "text": "Select an item",
-            //                     "emoji": true
-            //                 },
-            //                 "options": [
-            //                     {
-            //                         "text": {
-            //                             "type": "plain_text",
-            //                             "text": "302",
-            //                             "emoji": true
-            //                         },
-            //                         "value": "302"
-            //                     },
-            //                     {
-            //                         "text": {
-            //                             "type": "plain_text",
-            //                             "text": "402",
-            //                             "emoji": true
-            //                         },
-            //                         "value": "402"
-            //                     },
-            //
-            //                 ],
-            //                 "action_id": "room_number"
-            //             },
-            //             "label": {
-            //                 "type": "plain_text",
-            //                 "text": "회의실",
-            //                 "emoji": true
-            //             }
-            //         },
-            //         {
-            //             "type": "input",
-            //             "element": {
-            //                 "type": "plain_text_input",
-            //                 "action_id": "title"
-            //             },
-            //             "label": {
-            //                 "type": "plain_text",
-            //                 "text": "안건",
-            //                 "emoji": true
-            //             }
-            //         },
-            //         {
-            //             "type": "input",
-            //
-            //             "element": {
-            //                 "type": "plain_text_input",
-            //                 "multiline": true,
-            //                 "action_id": "description",
-            //
-            //             },
-            //             "label": {
-            //                 "type": "plain_text",
-            //                 "text": "자세히",
-            //                 "emoji": true
-            //             },
-            //             "optional": true
-            //         },
-            //         {
-            //             "type": "input",
-            //             dispatch_action: true,
-            //             "element": {
-            //                 "type": "datepicker",
-            //                 "initial_date": moment().format('yyyy-MM-DD'),
-            //                 "action_id": "selected_date"
-            //             },
-            //             "label": {
-            //                 "type": "plain_text",
-            //                 "text": "미팅 할 날짜",
-            //                 "emoji": true
-            //             }
-            //         },
-            //         {
-            //             "type": "actions",
-            //             "elements": [
-            //                 {
-            //                     "type": "static_select",
-            //                     "placeholder": {
-            //                         "type": "plain_text",
-            //                         "text": "회의 시작 시각",
-            //                         "emoji": true
-            //                     },
-            //                     "options": [
-            //
-            //
-            //                         ...this.startTime
-            //                     ],
-            //                     "action_id": "meeting_start"
-            //                 },
-            //                 //회의 끝
-            //                 {
-            //                     "type": "static_select",
-            //                     "placeholder": {
-            //                         "type": "plain_text",
-            //                         "text": "회의 종료 시각",
-            //                         "emoji": true
-            //                     },
-            //                     "options": [
-            //                         ...this.endTime
-            //
-            //                     ],
-            //                     "action_id": "meeting_end"
-            //                 }
-            //             ]
-            //         },
-            //         //참석자
-            //         {
-            //             "type": "input",
-            //             "element": {
-            //                 "type": "multi_users_select",
-            //                 "placeholder": {
-            //                     "type": "plain_text",
-            //                     "text": "Select users",
-            //                     "emoji": true
-            //                 },
-            //                 "action_id": "participant_list"
-            //             },
-            //             "label": {
-            //                 "type": "plain_text",
-            //                 "text": "미팅 참여자",
-            //                 "emoji": true
-            //             }
-            //         },
-            //
-            //     ]
-            // }
+            await axios.post('https://slack.com/api/views.update', qs.stringify(args))
 
-            // const args = {
-            //     token: slackConfig.token,
-            //     view: JSON.stringify(modal),
-            //     view_id: container.view_id
-            // };
-            //
-            //
-            // const result = await axios.post('https://slack.com/api/views.update', qs.stringify(args));
-
-            res.sendStatus(200);
-
-        }
-        else if (actions && actions[0].action_id.match(/meeting_duration/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_duration/)) {
             this.meetingData.duration = actions[0].selected_option.value;
-            const result = timeManager.timeList(this.meetingData.duration, this.businessTime)
-            const modal = blockManager.availTimeList(this.meetingData, result)
+            const result:any = timeManager.timeList(this.meetingData.duration, this.businessTime, this.meetingData.date, this.meetingData.roomNumber)
+            const modal:any = await blockManager.availTimeList(this.meetingData,await result)
 
 
             const args = {
@@ -400,10 +215,10 @@ class slackController {
                 view_id: container.view_id
             };
 
-          console.log(  await axios.post('https://slack.com/api/views.update', qs.stringify(args)))
+            await axios.post('https://slack.com/api/views.update', qs.stringify(args))
 
-        }
-        else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
+
+        } else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
 
             const meeting_id = actions[0].selected_option.value
 
@@ -420,9 +235,7 @@ class slackController {
                 const result1 = await meetingController.meetingList(user, trigger_id)
                 const list_block = [
                     ...blockManager.workSection(),
-                    {
-                        "type": "divider"
-                    },
+                    blockManager.divider(),
                     ...blockManager.meetingSection(),
                     ...result1
 
@@ -432,8 +245,7 @@ class slackController {
 
             }
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_start/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_start/)) {
             const modalForm = meetingController.createMeetingForm(payload.view, user).createMeeting
 
             const modal = blockManager.updateEndTimeModal(modalForm, this.bookedMeetings, actions[0].selected_option.value)
@@ -448,16 +260,18 @@ class slackController {
 
             console.log(result)
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_end/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_end/)) {
+            this.meetingData.start = actions[0].selected_option.value.split('-')[0];
+            this.meetingData.end = actions[0].selected_option.value.split('-')[1];
+
+            res.sendStatus(200)
 
 
-        }
-        else if (actions && actions[0].action_id.match(/participant_list/)) {
+        } else if (actions && actions[0].action_id.match(/participant_list/)) {
+
             this.meetingData.members = actions[0].selected_users
             res.sendStatus(200);
         }
-
 
 
     }
@@ -492,7 +306,7 @@ class slackController {
 
     openMeetingModal = async (trigger_id: any) => {
 
-        const modal = blockManager.meetingModal()
+        const modal =await blockManager.meetingModal()
 
         const args = {
             token: slackConfig.token,
