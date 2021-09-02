@@ -9,7 +9,7 @@ import timeManager from "./timeManager";
 class BlockManager {
     private startTime = viewController.setStartTime();
     private endTime = viewController.setEndTime();
-    public meetingRoomArr = [302, 402];
+    public meetingRoomArr = ['302', '402'];
 
     openConfirmModal = async (trigger_id: any, text: string) => {
 
@@ -53,7 +53,7 @@ class BlockManager {
 
     meetingRoom() {
 
-        const result = _.map(this.meetingRoomArr, (room: number) => {
+        const result = _.map(this.meetingRoomArr, (room: string) => {
 
             return {
                 "text": {
@@ -222,49 +222,41 @@ class BlockManager {
 
     }
 
+    modalBase() {
+        const title = {
+            "type": "plain_text",
+            "text": "회의실 예약",
+            "emoji": true
+        }
+        const submit = {
+            "type": "plain_text",
+            "text": "Submit",
+            "emoji": true
+        }
+        const close = {
+            "type": "plain_text",
+            "text": "Cancel",
+            "emoji": true
+        }
+        return {title, submit, close}
+    }
+
     async meetingModal() {
         const currTime = moment()
         //시간 반올림
         const remainder = 15 - currTime.minute() % 15
 
         //현재 시간 이후로만 예약가능
-        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'], moment().format('yyyy-MM-DD'),  this.meetingRoom()[0].value)
+        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'], moment().format('yyyy-MM-DD'), this.meetingRoom()[0].value)
         const modal = {
             type: 'modal',
             notify_on_close: true,
-            "title":
-                {
-                    "type":
-                        "plain_text",
-                    "text":
-                        "회의실 예약",
-                    "emoji":
-                        true
-                },
-            "submit":
-                {
-                    "type":
-                        "plain_text",
-                    "text":
-                        "Submit",
-                    "emoji":
-                        true
-                }
-            ,
-            "close":
-                {
-                    "type":
-                        "plain_text",
-                    "text":
-                        "Cancel",
-                    "emoji":
-                        true
-                }
-            ,
+            "title": this.modalBase().title,
+            "submit": this.modalBase().submit,
+            "close": this.modalBase().close,
             blocks: [
                 {
                     "type": "input",
-                    dispatch_action: true,
                     "element": {
                         "type": "static_select",
                         "placeholder": {
@@ -272,16 +264,14 @@ class BlockManager {
                             "text": "Select an item",
                             "emoji": true
                         },
-                        "options": [
-                            ...this.meetingRoom()
-                        ],
+                        "options": this.meetingRoom(),
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": `${this.meetingRoom()[0].value}`,
+                                "text": this.meetingRoom()[0].value,
                                 "emoji": true
                             },
-                            "value": `${this.meetingRoom()[0].value}`
+                            "value": this.meetingRoom()[0].value
                         },
                         "action_id": "room_number"
                     },
@@ -293,16 +283,9 @@ class BlockManager {
                 },
                 {
                     "type": "input",
-                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
-                        "initial_value": ' ',
                         "action_id": "meeting_title",
-                        "dispatch_action_config": {
-                            "trigger_actions_on": [
-                                "on_character_entered"
-                            ]
-                        }
                     },
                     "label": {
                         "type": "plain_text",
@@ -313,18 +296,10 @@ class BlockManager {
                 },
                 {
                     "type": "input",
-                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "multiline": true,
                         "action_id": "description",
-                        "initial_value": ' ',
-                        "dispatch_action_config": {
-                            "trigger_actions_on": [
-                                "on_character_entered"
-                            ]
-                        }
-
                     },
                     "label": {
                         "type": "plain_text",
@@ -427,25 +402,13 @@ class BlockManager {
                                 "text": "사용 가능한 시간",
                                 "emoji": true
                             },
-                            "options": [
-                                ...timeList
-                            ],
-                            // "initial_option": {
-                            //     "text": {
-                            //         "type": "plain_text",
-                            //         "text": `${this.endTime[0].value}:00`,
-                            //         "emoji": true
-                            //     },
-                            //     "value": `${this.endTime[0].value}`
-                            // },
+                            "options": timeList,
                             "action_id": "meeting_end"
                         }
                     ]
                 },
-                //참석자
                 {
                     "type": "input",
-                    dispatch_action: true,
                     "element": {
                         "type": "multi_users_select",
                         "placeholder": {
@@ -454,7 +417,6 @@ class BlockManager {
                             "emoji": true
                         },
                         "action_id": "participant_list",
-                        // initial_users: userIdList
                     },
                     "label": {
                         "type": "plain_text",
@@ -914,7 +876,7 @@ class BlockManager {
     }
 
 
-  async availTimeList(initData: any, timeList: any[]) {
+    async updateModal(initData: any, timeList: any[]) {
         let initMember = {}
         if (initData.members.length > 0) {
             initMember = {
@@ -961,40 +923,12 @@ class BlockManager {
         const modal = {
             type: 'modal',
             notify_on_close: true,
-            "title":
-                {
-                    "type":
-                        "plain_text",
-                    "text":
-                        "회의실 예약",
-                    "emoji":
-                        true
-                }
-            ,
-            "submit":
-                {
-                    "type":
-                        "plain_text",
-                    "text":
-                        "Submit",
-                    "emoji":
-                        true
-                }
-            ,
-            "close":
-                {
-                    "type":
-                        "plain_text",
-                    "text":
-                        "Cancel",
-                    "emoji":
-                        true
-                }
-            ,
+            "title": this.modalBase().title,
+            "submit": this.modalBase().submit,
+            "close": this.modalBase().close,
             blocks: [
                 {
                     "type": "input",
-                    dispatch_action: true,
                     "element": {
                         "type": "static_select",
                         "placeholder": {
@@ -1002,16 +936,14 @@ class BlockManager {
                             "text": "Select an item",
                             "emoji": true
                         },
-                        "options": [
-                            ...this.meetingRoom()
-                        ],
+                        "options": this.meetingRoom(),
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": `${initData.roomNumber}`,
+                                "text": initData.room_number,
                                 "emoji": true
                             },
-                            "value": `${initData.roomNumber}`
+                            "value": initData.room_number
                         },
                         "action_id": "room_number"
                     },
@@ -1023,16 +955,11 @@ class BlockManager {
                 },
                 {
                     "type": "input",
-                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "meeting_title",
-                        "initial_value": `${initData.title}`,
-                        "dispatch_action_config": {
-                            "trigger_actions_on": [
-                                "on_character_entered"
-                            ]
-                        }
+                        "initial_value": initData.title,
+
                     },
                     "label": {
                         "type": "plain_text",
@@ -1155,7 +1082,7 @@ class BlockManager {
                                 "text": "사용 가능한 시간",
                                 "emoji": true
                             },
-                            "options": [...timeList],
+                            "options": timeList,
                             "action_id": "meeting_end"
                         }
                     ]
@@ -1171,7 +1098,7 @@ class BlockManager {
 
     }
 
-    divider(){
+    divider() {
         return {
             "type": "divider"
         }

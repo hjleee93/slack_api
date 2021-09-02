@@ -30,7 +30,6 @@ class meetingController {
             }))
 
 
-
             if (!meeting.deleted_at) {
                 return {
                     "type": "section",
@@ -76,32 +75,41 @@ class meetingController {
         return result.filter((element, i) => element !== null);
     }
 
-    createMeetingForm(data: any, user: any) {
-
+    createMeetingForm(view: any, user: any) {
+        const values = view.state.values;
+        const blocks = view.blocks;
+        // const createMeeting = {
+        //     user_id: user.id,
+        //     room_number: data.roomNumber,
+        //     title: data.title,
+        //     description: data.description,
+        //     date: data.date,
+        //     start: data.start,
+        //     end: data.end,
+        // }
+        //
+        // const participantArr = data.members;
         const createMeeting = {
             user_id: user.id,
-            room_number: data.roomNumber,
-            title: data.title,
-            description: data.description,
-            date: data.date,
-            start: data.start,
-            end: data.end,
+            room_number: values[blocks[0].block_id].room_number.selected_option.value,
+            title: values[blocks[1].block_id].title ? values[blocks[1].block_id].title.value : '',
+            description: values[blocks[2].block_id].description.value !== null ? values[blocks[2].block_id].description.value : '',
+            date: values[blocks[3].block_id].selected_date.selected_date,
+            duration: values[blocks[4].block_id].meeting_duration.selected_option.value,
+            end: values[blocks[4].block_id].meeting_end.selected_option ? values[blocks[4].block_id].meeting_end.selected_option.value : '',
+            members: values[blocks[5].block_id].participant_list.selected_users,
         }
 
-        const participantArr = data.members;
-
-        return {createMeeting, participantArr}
+        return createMeeting
     }
 
     createMeeting = async (view: any, user: any) => {
         return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
 
-            console.log(view)
-
             const participantList: any = [];
-            const participantArr = this.createMeetingForm(view, user).participantArr;
+            const participantArr = this.createMeetingForm(view, user).members;
 
-            const meetingForm = this.createMeetingForm(view, user).createMeeting;
+            const meetingForm = this.createMeetingForm(view, user);
 
             const meeting = await dbs.Meeting.create(meetingForm, transaction);
 
@@ -117,7 +125,7 @@ class meetingController {
 
             // // throw new Error()
 
-            const result = await dbs.Participant.bulkCreate(participantList, transaction);
+            await dbs.Participant.bulkCreate(participantList, transaction);
 
             await slackController.sendDm(participantArr, user, meetingForm);
         })

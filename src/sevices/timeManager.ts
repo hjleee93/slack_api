@@ -27,7 +27,7 @@ class TimeManager {
             }
         })
         return (await this.checkDupTime(result, room_number, new Date(date)))
-        //
+
 
 
     }
@@ -53,6 +53,7 @@ class TimeManager {
             })
             originList.splice(startIdx, endIdx - startIdx);
         })
+
 
         return originList;
     }
