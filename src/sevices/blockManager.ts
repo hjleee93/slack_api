@@ -248,6 +248,7 @@ class BlockManager {
 
         //현재 시간 이후로만 예약가능
         const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'], moment().format('yyyy-MM-DD'), this.meetingRoom()[0].value)
+
         const modal = {
             type: 'modal',
             notify_on_close: true,
@@ -257,6 +258,7 @@ class BlockManager {
             blocks: [
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "static_select",
                         "placeholder": {
@@ -283,9 +285,15 @@ class BlockManager {
                 },
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "meeting_title",
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        }
                     },
                     "label": {
                         "type": "plain_text",
@@ -296,10 +304,16 @@ class BlockManager {
                 },
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "multiline": true,
                         "action_id": "description",
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        }
                     },
                     "label": {
                         "type": "plain_text",
@@ -403,12 +417,13 @@ class BlockManager {
                                 "emoji": true
                             },
                             "options": timeList,
-                            "action_id": "meeting_end"
+                            "action_id": "meeting_time"
                         }
                     ]
                 },
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "multi_users_select",
                         "placeholder": {
@@ -878,7 +893,7 @@ class BlockManager {
 
     async updateModal(initData: any, timeList: any[]) {
         let initMember = {}
-        if (initData.members.length > 0) {
+        if (!initData.members) {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -940,10 +955,10 @@ class BlockManager {
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": initData.room_number,
+                                "text": initData.roomNumber,
                                 "emoji": true
                             },
-                            "value": initData.room_number
+                            "value": initData.roomNumber
                         },
                         "action_id": "room_number"
                     },
@@ -955,11 +970,16 @@ class BlockManager {
                 },
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "plain_text_input",
                         "action_id": "meeting_title",
+                        "dispatch_action_config": {
+                            "trigger_actions_on": [
+                                "on_character_entered"
+                            ]
+                        },
                         "initial_value": initData.title,
-
                     },
                     "label": {
                         "type": "plain_text",
@@ -974,7 +994,7 @@ class BlockManager {
                         "type": "plain_text_input",
                         "multiline": true,
                         "action_id": "description",
-                        "initial_value": `${initData.description}`,
+                        "initial_value": initData.description,
                         "dispatch_action_config": {
                             "trigger_actions_on": [
                                 "on_character_entered"
@@ -1041,7 +1061,7 @@ class BlockManager {
                                 {
                                     "text": {
                                         "type": "plain_text",
-                                        "text": `60분`,
+                                        "text": `1시간`,
                                         "emoji": true
                                     },
                                     "value": '60'
@@ -1049,7 +1069,7 @@ class BlockManager {
                                 {
                                     "text": {
                                         "type": "plain_text",
-                                        "text": `90분`,
+                                        "text": `1시간 30분`,
                                         "emoji": true
                                     },
                                     "value": '90'
@@ -1057,7 +1077,7 @@ class BlockManager {
                                 {
                                     "text": {
                                         "type": "plain_text",
-                                        "text": `120분`,
+                                        "text": `2시간`,
                                         "emoji": true
                                     },
                                     "value": '120'
@@ -1067,7 +1087,7 @@ class BlockManager {
                             initial_option: {
                                 "text": {
                                     "type": "plain_text",
-                                    "text": `${initData.duration}분`,
+                                    "text": `${initData.duration >= 60 ? initData.duration == 90 ? '1시간 30분' : initData.duration/60 +'시간' : initData.duration+'분'}`,
                                     "emoji": true
                                 },
                                 "value": `${initData.duration}`
@@ -1083,7 +1103,7 @@ class BlockManager {
                                 "emoji": true
                             },
                             "options": timeList,
-                            "action_id": "meeting_end"
+                            "action_id": "meeting_time"
                         }
                     ]
                 },
@@ -1102,6 +1122,14 @@ class BlockManager {
         return {
             "type": "divider"
         }
+    }
+
+    minToHour(min:number){
+
+        let hour = parseInt(String(min / 60));
+
+
+
     }
 
 }

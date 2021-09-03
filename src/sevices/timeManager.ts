@@ -7,27 +7,46 @@ class TimeManager {
 
     async timeList(duration: number, businessTime: any[], date: any, room_number: string) {
 
-        let endTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
-        let tempTime = moment(businessTime[0], 'HH:mm');
+        let tempTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
+        let closeTime = moment(businessTime[0], 'HH:mm');
         let timeList: any[] = [businessTime[0]];
+        let result :any[] = [];
 
-        //15분 기준으로 예약 가능
-        while (tempTime < endTime) {
-            timeList.push(tempTime.add(15, 'm').format('HH:mm'))
+        console.log(date)
+
+        if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD678')) {
+
+            //15분 기준으로 예약 가능 closeTime
+            while (closeTime < tempTime) {
+                timeList.push(closeTime.add(15, 'm').format('HH:mm'))
+            }
+
+            result = _.map(timeList, (time: any) => {
+                let endTime = moment(time, 'HH:mm').add(duration, 'm');
+                if (endTime <= closeTime) {
+                    return {
+                        "text": {
+                            "type": "plain_text",
+                            "text": `${time} - ${endTime.format('HH:mm')}}`,
+                            "emoji": true
+                        },
+                        "value": `${time}-${endTime.format('HH:mm')}}`
+                    }
+                }
+
+
+            })
         }
 
-        const result: any = _.map(timeList, (time: any, idx: number) => {
-            return {
-                "text": {
-                    "type": "plain_text",
-                    "text": `${time} - ${moment(time, 'HH:mm').add(duration, 'm').format('HH:mm')}`,
-                    "emoji": true
-                },
-                "value": `${time}-${moment(time, 'HH:mm').add(duration, 'm').format('HH:mm')}`
-            }
-        })
-        return (await this.checkDupTime(result, room_number, new Date(date)))
 
+        return result[0] ?  (await this.checkDupTime(result, room_number, new Date(date))) : [{
+            "text": {
+                "type": "plain_text",
+                "text": '예약가능한 시간이 없습니다.',
+                "emoji": true
+            },
+            "value": 'null'
+        }]
 
 
     }
@@ -36,8 +55,8 @@ class TimeManager {
 
         const result = await dbs.Meeting.hasMeetingOnDate(selectedDate, roomNumber)
 
-        let startIdx: number;
-        let endIdx: number;
+        let startIdx: number | undefined;
+        let endIdx: number | undefined;
 
         _.some(result, (meeting: any) => {
             _.some(originList, (list: any, i: number) => {
@@ -51,7 +70,11 @@ class TimeManager {
                     return true;
                 }
             })
-            originList.splice(startIdx, endIdx - startIdx);
+            if (startIdx && endIdx) {
+                originList.splice(startIdx, endIdx - startIdx);
+                startIdx = undefined;
+                endIdx = undefined;
+            }
         })
 
 

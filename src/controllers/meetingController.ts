@@ -75,42 +75,42 @@ class meetingController {
         return result.filter((element, i) => element !== null);
     }
 
-    createMeetingForm(view: any, user: any) {
-        const values = view.state.values;
-        const blocks = view.blocks;
-        // const createMeeting = {
-        //     user_id: user.id,
-        //     room_number: data.roomNumber,
-        //     title: data.title,
-        //     description: data.description,
-        //     date: data.date,
-        //     start: data.start,
-        //     end: data.end,
-        // }
-        //
-        // const participantArr = data.members;
+    createMeetingForm(data: any, user: any) {
+        // const values = data.state.values;
+        // const blocks = data.blocks;
         const createMeeting = {
             user_id: user.id,
-            room_number: values[blocks[0].block_id].room_number.selected_option.value,
-            title: values[blocks[1].block_id].title ? values[blocks[1].block_id].title.value : '',
-            description: values[blocks[2].block_id].description.value !== null ? values[blocks[2].block_id].description.value : '',
-            date: values[blocks[3].block_id].selected_date.selected_date,
-            duration: values[blocks[4].block_id].meeting_duration.selected_option.value,
-            end: values[blocks[4].block_id].meeting_end.selected_option ? values[blocks[4].block_id].meeting_end.selected_option.value : '',
-            members: values[blocks[5].block_id].participant_list.selected_users,
+            room_number: data.roomNumber,
+            title: data.title,
+            description: data.description,
+            date: data.date,
+            start: data.start,
+            end: data.end,
+            members: data.members
         }
+        // const createMeeting = {
+        //     user_id: user.id,
+        //     room_number: values[blocks[0].block_id].room_number.selected_option.value,
+        //     title: values[blocks[1].block_id].title ? values[blocks[1].block_id].title.value : '',
+        //     description: values[blocks[2].block_id].description.value !== null ? values[blocks[2].block_id].description.value : '',
+        //     date: values[blocks[3].block_id].selected_date.selected_date,
+        //     duration: values[blocks[4].block_id].meeting_duration.selected_option.value,
+        //     end: values[blocks[4].block_id].meeting_end.selected_option ? values[blocks[4].block_id].meeting_end.selected_option.value : '',
+        //     members: values[blocks[5].block_id].participant_list.selected_users,
+        // }
 
         return createMeeting
     }
 
-    createMeeting = async (view: any, user: any) => {
+    createMeeting = async (data: any, user: any) => {
         return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
 
             const participantList: any = [];
-            const participantArr = this.createMeetingForm(view, user).members;
+            const participantArr = this.createMeetingForm(data, user).members;
 
-            const meetingForm = this.createMeetingForm(view, user);
+            const meetingForm = this.createMeetingForm(data, user);
 
+            //동시에 같은 회의실, 같은 날짜, 시간으로 등록하는 경우???
             const meeting = await dbs.Meeting.create(meetingForm, transaction);
 
             for (let i = 0; i < participantArr.length; i++) {
