@@ -893,7 +893,7 @@ class BlockManager {
 
     async updateModal(initData: any, timeList: any[]) {
         let initMember = {}
-        if (!initData.members) {
+        if (initData.members) {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -944,6 +944,7 @@ class BlockManager {
             blocks: [
                 {
                     "type": "input",
+                    dispatch_action: true,
                     "element": {
                         "type": "static_select",
                         "placeholder": {
@@ -1129,6 +1130,33 @@ class BlockManager {
         let hour = parseInt(String(min / 60));
 
 
+
+    }
+
+    confirmModal(text:string){
+        return {
+            "response_action": "update",
+            "view": {
+                "type": "modal",
+                "title": {
+                    "type": "plain_text",
+                    "text": "Updated view"
+                },
+                "close": {
+                    "type": "plain_text",
+                    "text": "닫기"
+                },
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "plain_text",
+                            "text": text
+                        }
+                    }
+                ]
+            }
+        }
 
     }
 

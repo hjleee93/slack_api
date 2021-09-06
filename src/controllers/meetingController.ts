@@ -110,24 +110,29 @@ class meetingController {
 
             const meetingForm = this.createMeetingForm(data, user);
 
-            //동시에 같은 회의실, 같은 날짜, 시간으로 등록하는 경우???
-            const meeting = await dbs.Meeting.create(meetingForm, transaction);
+            const hasMeeting = await dbs.Meeting.hasMeetingAtTime(new Date(meetingForm.date), meetingForm.room_number, meetingForm.start, meetingForm.end);
 
-            for (let i = 0; i < participantArr.length; i++) {
+            if (hasMeeting && hasMeeting.length === 0) {
 
-                let obj = {
-                    user_id: participantArr[i],
-                    meeting_id: meeting.id
-                    // name:view.username
+                const meeting = await dbs.Meeting.create(meetingForm, transaction);
+
+                for (let i = 0; i < participantArr.length; i++) {
+
+                    let obj = {
+                        user_id: participantArr[i],
+                        meeting_id: meeting.id
+                        // name:view.username
+                    }
+                    participantList.push(obj)
                 }
-                participantList.push(obj)
+
+                await dbs.Participant.bulkCreate(participantList, transaction);
+
+                await slackController.sendDm(participantArr, user, meetingForm);
+
+            } else {
+                throw new Error('이미 등록된 예약이 있습니다.')
             }
-
-            // // throw new Error()
-
-            await dbs.Participant.bulkCreate(participantList, transaction);
-
-            await slackController.sendDm(participantArr, user, meetingForm);
         })
 
 

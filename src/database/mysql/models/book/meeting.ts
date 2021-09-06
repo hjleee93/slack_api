@@ -1,5 +1,6 @@
 import Model from '../../../_base/model';
-import {DataTypes, Sequelize, Transaction} from 'sequelize';
+import * as moment from "moment-timezone";
+import {DataTypes, Op, Sequelize, Transaction} from 'sequelize';
 import {dbs} from '../../../../commons/globals';
 
 class MeetingModel extends Model {
@@ -27,13 +28,18 @@ class MeetingModel extends Model {
         return result;
     }
 
-    async hasMeetingOnDate(date: Date, roomNumber:string) {
-        const result = await this.findAll({date: date, room_number:roomNumber});
+    async hasMeetingOnDate(date: Date, roomNumber: string) {
+        const result = await this.findAll({date: date, room_number: roomNumber});
         return result;
     }
 
-    async hasMeetingAtTime(time: string) {
-        const result = await this.findAll({start: time});
+    async hasMeetingAtTime(date: Date, roomNumber: string, start: string, end: string) {
+
+        const result = await this.findAll({
+            start: {[Op.gte]: start, [Op.lt]: end},
+            room_number: roomNumber,
+            date: date
+        });
         return result;
     }
 

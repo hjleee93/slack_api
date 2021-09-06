@@ -59,11 +59,13 @@ class TempSaver {
     }
 
     updateRoom(user_id: any, roomNumber: string) {
-        this.obj.filter((form: any) => {
+        const form =    this.obj.filter((form: any) => {
             if (form.id === user_id) {
                 form.roomNumber = roomNumber;
+                return form;
             }
         })
+        return form[0];
     }
 
     updateDesc(user_id: any, desc: string) {

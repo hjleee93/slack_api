@@ -7,37 +7,36 @@ class TimeManager {
 
     async timeList(duration: number, businessTime: any[], date: any, room_number: string) {
 
-        let tempTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
-        let closeTime = moment(businessTime[0], 'HH:mm');
+        let closeTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
+        let startTime = moment(businessTime[0], 'HH:mm');
         let timeList: any[] = [businessTime[0]];
         let result :any[] = [];
 
-        console.log(date)
+        console.log(closeTime, moment(businessTime[1], 'HH:mm'))
 
-        if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD678')) {
+        // if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD')) {
 
             //15분 기준으로 예약 가능 closeTime
-            while (closeTime < tempTime) {
-                timeList.push(closeTime.add(15, 'm').format('HH:mm'))
+            while (startTime < closeTime) {
+                timeList.push(startTime.add(15, 'm').format('HH:mm'))
             }
 
             result = _.map(timeList, (time: any) => {
                 let endTime = moment(time, 'HH:mm').add(duration, 'm');
-                if (endTime <= closeTime) {
+
+                // if (endTime <= startTime){
                     return {
                         "text": {
                             "type": "plain_text",
-                            "text": `${time} - ${endTime.format('HH:mm')}}`,
+                            "text": `${time} - ${endTime.format('HH:mm')}`,
                             "emoji": true
                         },
-                        "value": `${time}-${endTime.format('HH:mm')}}`
+                        "value": `${time}-${endTime.format('HH:mm')}`
                     }
-                }
+
 
 
             })
-        }
-
 
         return result[0] ?  (await this.checkDupTime(result, room_number, new Date(date))) : [{
             "text": {
@@ -60,14 +59,14 @@ class TimeManager {
 
         _.some(result, (meeting: any) => {
             _.some(originList, (list: any, i: number) => {
-                if (list.value.split('-')[0] === meeting.start) {
-                    startIdx = i;
+                if (list.value.split('-')[1] === meeting.start) {
+                    startIdx = i+1;
                 } else if (list.value.split('-')[0] === meeting.end) {
                     endIdx = i;
-                    return true;
+                    // return true;
                 } else if (list.value.split('-')[1] === meeting.end) {
                     endIdx = originList.length;
-                    return true;
+                    // return true;
                 }
             })
             if (startIdx && endIdx) {

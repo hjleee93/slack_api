@@ -8,27 +8,31 @@ import * as ejs from 'ejs';
 import * as ws from 'ws';
 import * as getPort from 'get-port';
 
-import { Request, Response, Router } from 'express';
-import {  } from 'express-ws'
-import { Sequelize } from 'sequelize';
+import {Request, Response, Router} from 'express';
+import {} from 'express-ws'
+import {Sequelize} from 'sequelize';
 
 import * as admin from 'firebase-admin';
-import { firebase } from '../commons/globals';
+import {firebase} from '../commons/globals';
 
 import MySql from '../database/mysql';
 
-import { IMessageQueueOptions, IServerOptions } from '../commons/interfaces';
+import {IMessageQueueOptions, IServerOptions} from '../commons/interfaces';
 import * as Pkg from '../../package.json';
 
-import { dbs } from '../commons/globals';
+import {dbs} from '../commons/globals';
 import dbOptions from '../../config/dbs';
 
 import cfgOption from '../../config/opt';
-const { CORS } = cfgOption;
+
+const {CORS} = cfgOption;
+
+//spreadsheet
+import * as google from 'googleapis';
 
 
 // graph-ql
-import { GraphQLSchema } from 'graphql';
+import {GraphQLSchema} from 'graphql';
 import * as graphqlHTTP from 'express-graphql';
 // const { generateSchema } = require('sequelize-graphql-schema')();
 
@@ -38,11 +42,11 @@ import * as swaggerUi from 'swagger-ui-express'
 
 // colors
 import * as colors from 'colors';
-import { logger } from '../commons/logger';
+import {logger} from '../commons/logger';
 
 // import { adminTracking, getIdToken, validateAdminIdToken } from '../routes/_common';
-import { IncomingMessage } from 'http';
-import { verifyJWT } from '../commons/utils';
+import {IncomingMessage} from 'http';
+import {verifyJWT} from '../commons/utils';
 
 colors.setTheme({
     silly: 'rainbow',
@@ -98,7 +102,7 @@ export default class Server {
 
 
     protected setEJS() {
-        if ( !!this.app ) {
+        if (!!this.app) {
             this.app.set('views', path.join(__dirname, '..', '..', '/views'));
             this.app.set('view engine', 'ejs');
             this.app.engine('html', ejs.renderFile);
@@ -107,7 +111,7 @@ export default class Server {
 
 
     protected setSwagger() {
-        if ( !!this.app && process.env.NODE_ENV !== 'production' ) {
+        if (!!this.app && process.env.NODE_ENV !== 'production') {
             const options = {
                 // explorer: true
             };
@@ -117,14 +121,14 @@ export default class Server {
 
 
     protected setGraphQL() {
-        if ( !!this.app ) {
+        if (!!this.app) {
             const models: any = {
                 Sequelize,
                 sequelize: this.db,
             };
             _.forEach(dbs, (db: any) => {
-                db.model.graphql = { queries: {} };
-                db.model.graphql.queries[`${db.name}Count`] = { resolver: (_: any, where: any) => Promise.resolve(db.model.count(where)) };
+                db.model.graphql = {queries: {}};
+                db.model.graphql.queries[`${db.name}Count`] = {resolver: (_: any, where: any) => Promise.resolve(db.model.count(where))};
                 models[db.name] = db.model;
             });
             // models.Sequelize = Sequelize;
@@ -139,16 +143,15 @@ export default class Server {
                         // }
 
                         return Promise.resolve();
-                    }
-                    catch (e) {
-                        return  Promise.reject(e);
+                    } catch (e) {
+                        return Promise.reject(e);
                     }
                 }
             }
-            const { generateSchema } = require('sequelize-graphql-schema')(options);
+            const {generateSchema} = require('sequelize-graphql-schema')(options);
             const schema = generateSchema(models);
             const hooker: any = (req: Request, res: Response, next: any) => {
-                if ( req.method.toUpperCase() !== 'GET' && req.body?.query?.includes('Post') ) {
+                if (req.method.toUpperCase() !== 'GET' && req.body?.query?.includes('Post')) {
                     // return adminTracking(req, res, next);
                 }
                 next();
@@ -163,10 +166,9 @@ export default class Server {
 
     protected setFirebase() {
         let serviceAccount;
-        if ( process.env.NODE_ENV === 'production' ) {
+        if (process.env.NODE_ENV === 'production') {
             serviceAccount = require('../../config/firebase/service-account.json');
-        }
-        else {
+        } else {
             serviceAccount = require('../../config/firebase/zempie-dev-firebase-adminsdk-mt5jv-9e05cbc8f2.json');
         }
         admin.initializeApp({
@@ -193,13 +195,12 @@ export default class Server {
     }
 
 
-
-    protected setExpress(options : IServerOptions) : void {
+    protected setExpress(options: IServerOptions): void {
         this.app = express();
-        if ( this.app ) {
-            if ( !!options.static_path && options.static_path instanceof Array ) {
+        if (this.app) {
+            if (!!options.static_path && options.static_path instanceof Array) {
                 options.static_path.forEach((obj: any) => {
-                    if ( this.app ) {
+                    if (this.app) {
                         this.app.use(obj.path, express.static(obj.route));
                     }
                 })
@@ -207,13 +208,12 @@ export default class Server {
 
             // this.app.use(cors({ credentials: true, origin: CORS.allowedOrigin }));
             this.app.use(bodyParser.json());
-            this.app.use(bodyParser.urlencoded({ extended:false }));
+            this.app.use(bodyParser.urlencoded({extended: false}));
 
             options.tcp && this.setTcp();
             this.routes(this.app);
         }
     }
-
 
 
     protected async setRDB() {
@@ -228,13 +228,11 @@ export default class Server {
 
 
     protected setTcp() {
-        if ( this.app ) {
+        if (this.app) {
             const instance = expressWs(this.app);
             this.wss = instance.getWss()
         }
     }
-
-
 
     protected routes(app: Router) {
         // app.use((req, res, next) => {
@@ -244,7 +242,7 @@ export default class Server {
         app.get('/test', (req, res) => {
             const status = {
                 Started_At: this.started_at.toLocaleString('ko-KR',
-                    { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                    {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})
             }
             res.send(status);
         });
@@ -254,14 +252,13 @@ export default class Server {
     }
 
 
-
-    public start = async () : Promise<void> => {
+    public start = async (): Promise<void> => {
         await this.beforeStart();
 
         // const port = await getPort({ port: getPort.makeRange(this.options.port, this.options.port+100)});
         const port = this.options.port;
         const errorCallback: any = (err: Error) => {
-            if ( err ) {
+            if (err) {
                 console.error(err.stack);
                 return
             }
@@ -270,14 +267,14 @@ export default class Server {
             logger.info(`[${process.env.NODE_ENV || 'local'}] Api Server [ver.${Pkg.version}] has started. (port: ${port})`.cyan.bold)
         };
 
-        if ( !!this.app ) {
+        if (!!this.app) {
             this.app.listen(port, errorCallback);
         }
 
         await this.afterStart();
     }
 
-    protected beforeStart = async(): Promise<void> => {
+    protected beforeStart = async (): Promise<void> => {
     }
 
     protected afterStart = async (): Promise<void> => {

@@ -49,6 +49,7 @@
     "firebase-admin": "^8.13.0",
     "formidable": "^1.2.2",
     "get-port": "^5.1.1",
+    "googleapis": "^39.2.0",
     "graphql": "^14.6.0",
     "i18n": "^0.13.2",
     "imagemin": "^7.0.1",
