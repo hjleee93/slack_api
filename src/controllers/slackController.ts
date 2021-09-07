@@ -10,8 +10,6 @@ import viewController from "./viewController";
 import workTimeController from "./workTimeController";
 import {dbs} from "../commons/globals";
 
-
-import * as meeting_edit_done_modal from "../json/booking_edit_done_modal.json";
 import blockManager from "../sevices/blockManager";
 import timeManager from "../sevices/timeManager";
 import tempSaver from "../sevices/tempSaver";
@@ -23,22 +21,23 @@ const qs = require('qs');
 class slackController {
 
     private businessTime = ['10:00', '19:00']
-    private startTime = viewController.setStartTime();
-    private endTime = viewController.setEndTime();
-    private bookedMeetings !: any;
+    private isEdit: boolean = false;
+    private meetingId: number = 0;
 
+
+    initLocalData(user_id: string) {
+        tempSaver.deleteForm(user_id);
+        this.isEdit = false;
+        this.meetingId = 0;
+    }
 
     event = async (req: any, res: any) => {
-
-
         res.send(req.body)
         const {type, user, channel, tab, text, subtype} = req.body.event;
         if (type === 'app_home_opened') {
             let homeBlock = [
                 ...blockManager.workSection(),
-                {
-                    "type": "divider"
-                },
+                blockManager.divider(),
                 ...blockManager.meetingSection()
 
             ]
@@ -57,77 +56,82 @@ class slackController {
             const submitType = payload.view.submit.text
 
             if (submitType.toLowerCase() === 'edit') {
-                // await meetingController.editMeeting(payload.view, this.meetingData.id, user)
-                res.send(meeting_edit_done_modal)
+
+                await meetingController.editMeeting(tempSaver.meetingForm(user.id), this.meetingId, user)
+                    .then(() => {
+                        res.send(blockManager.updateConfirmModal("예약 수정이 완료되었습니다."))
+                    })
+                    .catch((e) => {
+                        res.send(blockManager.updateConfirmModal(e.message))
+                    })
+
             } else {
                 await meetingController.createMeeting(tempSaver.meetingForm(user.id), user)
                     .then(() => {
-                        res.send(blockManager.confirmModal("예약이 완료되었습니다."))
+                        res.send(blockManager.updateConfirmModal("예약이 완료되었습니다."))
                     })
                     .catch((e) => {
-                        res.send(blockManager.confirmModal(e.message))
+                        res.send(blockManager.updateConfirmModal(e.message))
                     })
             }
-            tempSaver.deleteForm(user.id);
+            this.initLocalData(user.id);
         } else if (type === "view_closed") {
-            tempSaver.deleteForm(user.id);
-
+            this.initLocalData(user.id);
         }
 
         //form actions
 
         if (actions && actions[0].action_id.match(/work_start/)) {
-            try {
-                await workController.workStart(user, trigger_id)
-                res.sendStatus(200);
-            } catch (e) {
-                res.sendStatus(500);
-            }
+
+            await workController.workStart(user, trigger_id)
+                .then(() => {
+                    res.sendStatus(200);
+                })
+                .catch(() => {
+                    res.sendStatus(500);
+                })
+
         } else if (actions && actions[0].action_id.match(/work_end/)) {
             await workController.workEnd(user, trigger_id)
-            res.sendStatus(200);
+                .then(() => {
+                    res.sendStatus(200);
+                })
+                .catch(() => {
+                    res.sendStatus(500);
+                })
+
         } else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
             const result = await workController.workHistory(user, historyDuration);
 
             const history_block = [
                 ...blockManager.workSection(),
-                {
-                    "type": "header",
-                    "text": {
-                        "type": "plain_text",
-                        "text": `${moment().subtract(historyDuration, 'days').format('yyyy-MM-DD')} ~ ${moment().format('yyyy-MM-DD')} 출퇴근 기록`,
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*-------------------------------------------------------------------------*\n          *날짜         |          출근 시간          |          퇴근 시간          *\n*-------------------------------------------------------------------------*"
-                    }
-                },
+                blockManager.history.title(historyDuration),
+                blockManager.history.header(),
                 ...result,
-                {
-                    "type": "divider"
-                },
+                blockManager.divider(),
                 ...blockManager.meetingSection()
-
             ]
 
-            const response = await this.displayHome(user.id, history_block);
-
-            if (response.data.error) {
-                res.sendStatus(500)
-            } else {
-                res.sendStatus(200);
-            }
+            await this.displayHome(user.id, history_block)
+                .then(() => {
+                    res.sendStatus(200);
+                })
+                .catch(() => {
+                    res.sendStatus(500);
+                });
 
         } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
             tempSaver.createData(user.id);
 
-            await this.openMeetingModal(trigger_id);
-            res.sendStatus(200);
+            await this.openMeetingModal(trigger_id)
+                .then(() => {
+                    res.sendStatus(200);
+                })
+                .catch((e) => {
+                    res.sendStatus(500);
+                })
+
 
         } else if (actions && actions[0].action_id.match(/meeting_list/)) {
             const clickedType = actions[0].value
@@ -138,23 +142,14 @@ class slackController {
                 blockManager.divider(),
                 ...blockManager.meetingSection(),
                 ...result,
-
-
             ]
             await this.displayHome(user.id, list_block)
 
-        } else if (actions && actions[0].action_id.match(/meeting_edit/)) {
-
-            const meeting_id = actions[0].value;
-            const meetingInfo = await meetingController.getMeetingInfo(meeting_id, user);
-
-            await this.openEditModal(trigger_id, meetingInfo);
-
         } else if (actions && actions[0].action_id.match(/room_number/)) {
             const form: any = tempSaver.updateRoom(user.id, actions[0].selected_option.value);
-            const result = timeManager.timeList(form.duration, this.businessTime, form.date, form.roomNumber);
+            const result = timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
 
-            const modal = await blockManager.updateModal(form, await result)
+            const modal = await blockManager.updateModal(form, await result, this.isEdit)
 
             const args = {
                 token: slackConfig.token,
@@ -175,15 +170,16 @@ class slackController {
         } else if (actions && actions[0].action_id.match(/selected_date/)) {
             let result !: any
             const form = tempSaver.updateDate(user.id, actions[0].selected_date);
+            console.log(form)
 
             //오늘 날짜 선택한 경우
             const remainder = 15 - moment().minute() % 15
             if (actions[0].selected_date === moment().format('yyyy-MM-DD')) {
-                result = timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.roomNumber)
+                result = timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
             } else {
-                result = timeManager.timeList(form.duration, this.businessTime, form.date, form.roomNumber);
+                result = timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
             }
-            const modal = await blockManager.updateModal(form, await result)
+            const modal = await blockManager.updateModal(form, await result, this.isEdit)
 
             const args = {
                 token: slackConfig.token,
@@ -197,21 +193,20 @@ class slackController {
             const duration = actions[0].selected_option.value
             const form: any = tempSaver.updateDuration(user.id, duration)
 
-            console.log(form)
             let result !: any
 
             //오늘 날짜 선택한 경우
             const remainder = 15 - moment().minute() % 15
             if (form.date === moment().format('yyyy-MM-DD')) {
 
-                result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.roomNumber)
+                result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
             } else {
-                result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.roomNumber);
+                result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
             }
 
 
-            // const result: any = timeManager.timeList(duration, this.businessTime, form.date, form.roomNumber)
-            const modal: any = await blockManager.updateModal(form, result)
+            // const result: any = timeManager.timeList(duration, this.businessTime, form.date, form.room_number)
+            const modal: any = await blockManager.updateModal(form, result, this.isEdit)
 
 
             const args = {
@@ -223,12 +218,34 @@ class slackController {
 
 
         } else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
-
+            tempSaver.deleteForm(user.id);
             const meeting_id = actions[0].selected_option.value
 
             if (actions[0].selected_option.text.text.toLowerCase() === 'edit') {
+                this.isEdit = true
+                this.meetingId = meeting_id;
                 const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
-                await this.openEditModal(trigger_id, meetingInfo);
+                const form: any = await tempSaver.createEditDate(meetingInfo, user.id);
+
+
+                const result: any = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
+                const modal: any = await blockManager.updateModal(form, result, this.isEdit);
+
+                const args = {
+                    token: slackConfig.token,
+                    view: JSON.stringify(modal),
+                    trigger_id: trigger_id,
+                };
+
+                await axios.post('https://slack.com/api/views.open', qs.stringify(args))
+                    .then((response:any) => {
+                        console.log(response)
+                        res.sendStatus(200);
+                    })
+                    .catch(() => {
+                        res.sendStatus(500);
+                    })
+
             } else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
 
                 const result = await meetingController.deleteMeeting(meeting_id, user, trigger_id)
@@ -245,7 +262,13 @@ class slackController {
 
                 ]
                 await this.displayHome(user.id, list_block)
-                res.sendStatus(200);
+                    .then(() => {
+                        res.sendStatus(200);
+                    })
+                    .catch(() => {
+                        res.sendStatus(500);
+                    })
+
 
             }
 
@@ -268,8 +291,8 @@ class slackController {
 
             if (actions[0].selected_option.value === 'null') {
                 const form = tempSaver.updateDate(user.id, moment().add(1, 'day').format('yyyy-MM-DD'))
-                const result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.roomNumber);
-                const modal: any = await blockManager.updateModal(form, result)
+                const result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
+                const modal: any = await blockManager.updateModal(form, result, this.isEdit)
 
 
                 const args = {
@@ -277,7 +300,7 @@ class slackController {
                     view: JSON.stringify(modal),
                     view_id: container.view_id
                 };
-                console.log(await axios.post('https://slack.com/api/views.update', qs.stringify(args)))
+                await axios.post('https://slack.com/api/views.update', qs.stringify(args))
             } else {
                 tempSaver.updateTime(user.id, actions[0].selected_option.value)
             }
@@ -294,6 +317,7 @@ class slackController {
 
     }
 
+
     displayHome = async (user_id: any, block: any) => {
 
         const args = {
@@ -302,11 +326,9 @@ class slackController {
             view: await this.updateView(user_id, block)
         };
 
-        const result = await axios.post('https://slack.com/api/views.publish', qs.stringify(args));
-
-
-        return result
+        return await axios.post('https://slack.com/api/views.publish', qs.stringify(args));
     }
+
     updateView = async (user: any, blocks: any) => {
 
         let view = {
@@ -332,213 +354,9 @@ class slackController {
             view: JSON.stringify(modal)
         };
 
-        const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
-
+        await axios.post('https://slack.com/api/views.open', qs.stringify(args));
 
     };
-
-    openEditModal = async (trigger_id: any, meetingInfo: any) => {
-
-        //initial_users
-        const userIdList = await this.getUserId(meetingInfo.id);
-        // this.meetingId = meetingInfo.id;
-
-        const editModal = {
-            type: 'modal',
-            "title": {
-                "type": "plain_text",
-                "text": "My App",
-                "emoji": true
-            },
-            "submit": {
-                "type": "plain_text",
-                "text": "Edit",
-                "emoji": true
-            },
-            "close": {
-                "type": "plain_text",
-                "text": "Cancel",
-                "emoji": true
-            },
-            blocks: [
-                // Text input
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "선택부탁",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    "element": {
-                        "type": "static_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select an item",
-                            "emoji": true
-                        },
-                        "options": [
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "302",
-                                    "emoji": true
-                                },
-                                "value": "302"
-                            },
-                            {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": "402",
-                                    "emoji": true
-                                },
-                                "value": "402"
-                            },
-
-                        ],
-                        "initial_option": {
-                            "text": {
-                                "type": "plain_text",
-                                "text": meetingInfo.room_number,
-                                "emoji": true
-                            },
-                            "value": meetingInfo.room_number
-                        },
-                        "action_id": "room_number"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "회의실",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "title",
-                        "initial_value": meetingInfo.title
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "안건",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    "element": {
-                        "type": "plain_text_input",
-                        "multiline": true,
-                        "action_id": "description",
-                        "initial_value": meetingInfo.description
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "자세히",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    "element": {
-                        "type": "datepicker",
-                        // 1990-04-28"
-                        "initial_date": meetingInfo.date,
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select a date",
-                            "emoji": true
-                        },
-                        "action_id": "selected_date"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "미팅 할 날짜",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "static_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "회의 시작 시각",
-                                "emoji": true
-                            },
-                            "options": [
-
-                                ...this.startTime
-                            ],
-                            "initial_option": {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": `${meetingInfo.start}:00`,
-                                    "emoji": true
-                                },
-                                "value": meetingInfo.start
-                            },
-                            "action_id": "meeting_start"
-                        },
-                        //회의 끝
-                        {
-                            "type": "static_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "회의 종료 시각",
-                                "emoji": true
-                            },
-                            "options": [
-                                ...this.endTime
-
-                            ],
-                            "initial_option": {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": `${meetingInfo.end}:00`,
-                                    "emoji": true
-                                },
-                                "value": meetingInfo.end
-                            },
-                            "action_id": "meeting_end"
-                        }
-                    ]
-                },
-                //참석자
-                {
-                    "type": "input",
-                    "element": {
-                        "type": "multi_users_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select users",
-                            "emoji": true
-                        },
-                        "action_id": "participant_list",
-                        initial_users: userIdList
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "미팅 참여자",
-                        "emoji": true
-                    }
-                },
-
-            ]
-        };
-
-        const args = {
-            token: slackConfig.token,
-            trigger_id: trigger_id,
-            view: JSON.stringify(editModal)
-        };
-
-        const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
-    }
 
 
     sendDm = async (userList: string[], user: any, meetingInfo: any) => {
@@ -551,7 +369,7 @@ class slackController {
                 text: '미팅 예약 메세지확인'
             };
 
-            const result = await axios.post('https://slack.com/api/chat.postMessage', qs.stringify(args));
+            await axios.post('https://slack.com/api/chat.postMessage', qs.stringify(args));
 
         }
     }

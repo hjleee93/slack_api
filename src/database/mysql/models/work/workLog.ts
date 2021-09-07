@@ -29,8 +29,8 @@ class WorkLogModel extends Model {
                 user_id,
                 start: {
                     //범위
-                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
-                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
+                    [Op.lte]: moment().toDate(),
+                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
                 }
             }
         })
@@ -40,14 +40,30 @@ class WorkLogModel extends Model {
         return await this.model.findOne({
             where: {
                 user_id,
+                start:{
+                    [Op.lte]: moment().toDate(),
+                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
+                },
                 end: {
                     //범위
-                    [Op.gte]: moment().format('yyyy-MM-DD').toString(),
-                    [Op.lt]: moment().add(1, 'day').format('yyyy-MM-DD').toString(),
+                    [Op.lte]: moment().toDate(),
+                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
                 }
             }
         })
     }
+
+    // async workEnd(user_id:string,id:number){
+    //     return await this.model.update({
+    //         end:moment().toDate(),
+    //         where:{
+    //             user_id,
+    //             id
+    //
+    //         }
+    //     })
+    //
+    // }
 
 
 

@@ -12,8 +12,6 @@ class TimeManager {
         let timeList: any[] = [businessTime[0]];
         let result :any[] = [];
 
-        console.log(closeTime, moment(businessTime[1], 'HH:mm'))
-
         // if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD')) {
 
             //15분 기준으로 예약 가능 closeTime
@@ -50,16 +48,19 @@ class TimeManager {
 
     }
 
-    async checkDupTime(originList: any[], roomNumber: string, selectedDate: Date) {
+    async checkDupTime(originList: any[], room_number: string, selectedDate: Date) {
 
-        const result = await dbs.Meeting.hasMeetingOnDate(selectedDate, roomNumber)
+        const result = await dbs.Meeting.hasMeetingOnDate(selectedDate, room_number)
 
         let startIdx: number | undefined;
         let endIdx: number | undefined;
 
         _.some(result, (meeting: any) => {
             _.some(originList, (list: any, i: number) => {
-                if (list.value.split('-')[1] === meeting.start) {
+                if (list.value.split('-')[0] === meeting.start) {
+                    startIdx = i;
+                }
+               else if (list.value.split('-')[1] === meeting.start) {
                     startIdx = i+1;
                 } else if (list.value.split('-')[0] === meeting.end) {
                     endIdx = i;
@@ -69,7 +70,8 @@ class TimeManager {
                     // return true;
                 }
             })
-            if (startIdx && endIdx) {
+
+            if ((startIdx || startIdx === 0) && endIdx) {
                 originList.splice(startIdx, endIdx - startIdx);
                 startIdx = undefined;
                 endIdx = undefined;

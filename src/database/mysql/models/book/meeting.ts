@@ -28,16 +28,16 @@ class MeetingModel extends Model {
         return result;
     }
 
-    async hasMeetingOnDate(date: Date, roomNumber: string) {
-        const result = await this.findAll({date: date, room_number: roomNumber});
+    async hasMeetingOnDate(date: Date, room_number: string) {
+        const result = await this.findAll({date: date, room_number: room_number});
         return result;
     }
 
-    async hasMeetingAtTime(date: Date, roomNumber: string, start: string, end: string) {
+    async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string) {
 
         const result = await this.findAll({
             start: {[Op.gte]: start, [Op.lt]: end},
-            room_number: roomNumber,
+            room_number: room_number,
             date: date
         });
         return result;

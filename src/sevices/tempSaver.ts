@@ -1,5 +1,7 @@
 import blockManager from "./blockManager";
+import * as _ from 'lodash';
 import * as moment from "moment-timezone";
+import {dbs} from "../commons/globals";
 
 class TempSaver {
     private obj: any [] = [];
@@ -8,7 +10,7 @@ class TempSaver {
         this.obj.push(
             {
                 id: user_id,
-                roomNumber: blockManager.meetingRoomArr[0],
+                room_number: blockManager.meetingRoomArr[0],
                 title: '',
                 description: '',
                 date: moment().format('yyyy-MM-DD'),
@@ -19,6 +21,26 @@ class TempSaver {
 
             })
         return this.obj;
+    }
+    async createEditDate(data: any, user_id: string) {
+        const memberList = await dbs.Participant.findAllUser(data.id)
+
+        const members = _.map(memberList, (list:any)=>{
+            return list.user_id
+        })
+        this.obj.push(
+            {
+                id: user_id,
+                room_number: data.room_number,
+                title: data.title,
+                description: data.description,
+                date: data.date,
+                duration: moment.duration(moment(data.end, 'HH:mm').diff(moment(data.start, 'HH:mm'))).asMinutes(),
+                start: data.start,
+                end: data.end,
+                members: members
+            })
+        return this.obj[0];
     }
 
     deleteForm(user_id: any) {
@@ -58,10 +80,10 @@ class TempSaver {
         })
     }
 
-    updateRoom(user_id: any, roomNumber: string) {
+    updateRoom(user_id: any, room_number: string) {
         const form =    this.obj.filter((form: any) => {
             if (form.id === user_id) {
-                form.roomNumber = roomNumber;
+                form.room_number = room_number;
                 return form;
             }
         })

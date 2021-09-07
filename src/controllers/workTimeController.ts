@@ -22,7 +22,7 @@ class workTimeController {
 
             const workStart = {
                 user_id,
-                start: moment().format('YYYY-MM-DDTHH:mm:ss')
+                start: moment().toDate()
             }
             const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id, transaction)
 
@@ -32,9 +32,8 @@ class workTimeController {
                 }
 
                 await dbs.WorkLog.create(workStart, transaction)
-                 await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
-            }
-            else {
+                await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
+            } else {
                 await blockManager.openConfirmModal(trigger_id, '이미 출근처리되었습니다.');
             }
         })
@@ -43,7 +42,7 @@ class workTimeController {
     workEnd = async (user: any, trigger_id: any) => {
         return dbs.WorkLog.getTransaction(async (transaction: Transaction) => {
             const user_id = user.id;
-            const workEnd = moment().format('YYYY-MM-DDTHH:mm:ss');
+
 
             const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id)
 
@@ -52,24 +51,20 @@ class workTimeController {
 
             if (isWorkEnd) {
                 await blockManager.openConfirmModal(trigger_id, '이미 퇴근하셨습니다.');
-            }
-            else if (isWorkStart) {
-                const workDone = await dbs.WorkLog.update({end: workEnd}, {user_id: user_id});
+            } else if (isWorkStart) {
+                console.log(isWorkStart.id)
+                const workDone = await dbs.WorkLog.update({end: moment().toDate()}, {user_id: user_id, id:isWorkStart.id},transaction);
 
                 if (workDone[0] === 1) {
                     await blockManager.openConfirmModal(trigger_id, '퇴근 처리되었습니다. ');
+                } else {
+                    await blockManager.openConfirmModal(trigger_id, '퇴근 처리에 실패하였습니다.');
                 }
-                else {
-                    // res.status(500).send('Update slack failure. (id: ' + user_id + ')')
-                }
-
-            }
-            else {
+            } else {
                 await blockManager.openConfirmModal(trigger_id, '출근기록이 없습니다. 출근 버튼 먼저 눌러주세요');
             }
         })
     }
-
 
 
     workHistory = async (user: any, historyDuration: string) => {
@@ -82,7 +77,7 @@ class workTimeController {
         })
 
         //@ts-ignore
-        workHistory = workHistory.sort((a:any, b:any) =>new Date(b.start)- new Date(a.start))
+        workHistory = workHistory.sort((a: any, b: any) => new Date(b.start) - new Date(a.start))
 
         const result = _.map(workHistory, (log: any) => {
 
