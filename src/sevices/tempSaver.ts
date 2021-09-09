@@ -49,7 +49,6 @@ class TempSaver {
                 this.obj.splice(index, 1);
             }
         })
-        console.log(this.obj)
     }
 
     meetingForm(user_id: any) {

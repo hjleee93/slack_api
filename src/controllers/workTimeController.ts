@@ -4,7 +4,7 @@ import {Op, Transaction} from 'sequelize';
 
 
 import {dbs} from "../commons/globals";
-import viewController from "./viewController";
+
 import blockManager from "../sevices/blockManager";
 
 
@@ -42,17 +42,13 @@ class workTimeController {
     workEnd = async (user: any, trigger_id: any) => {
         return dbs.WorkLog.getTransaction(async (transaction: Transaction) => {
             const user_id = user.id;
-
-
             const isWorkStart = await dbs.WorkLog.hasWorkStart(user_id)
-
             const isWorkEnd = await dbs.WorkLog.hasWorkEnd(user_id)
 
 
             if (isWorkEnd) {
                 await blockManager.openConfirmModal(trigger_id, '이미 퇴근하셨습니다.');
             } else if (isWorkStart) {
-                console.log(isWorkStart.id)
                 const workDone = await dbs.WorkLog.update({end: moment().toDate()}, {user_id: user_id, id:isWorkStart.id},transaction);
 
                 if (workDone[0] === 1) {
@@ -69,6 +65,7 @@ class workTimeController {
 
     workHistory = async (user: any, historyDuration: string) => {
         const user_id = user.id;
+
         let workHistory = await dbs.WorkLog.findAll({
             user_id,
             start: {

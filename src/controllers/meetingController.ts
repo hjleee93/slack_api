@@ -164,7 +164,6 @@ class meetingController {
 
                 await dbs.Meeting.update(meetingForm, {id: meeting_id}, transaction);
 
-
                 for (let i = 0; i < participantArr.length; i++) {
 
                     let obj = {
@@ -174,7 +173,6 @@ class meetingController {
                     }
                     participantList.push(obj)
                 }
-
 
                 // throw new Error()
                 await dbs.Participant.destroy({meeting_id: meeting_id});

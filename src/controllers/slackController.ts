@@ -1,12 +1,12 @@
 import * as _ from 'lodash';
-import axios from "axios"
+import axios, {AxiosResponse} from "axios"
 import * as moment from 'moment-timezone';
 
 import slackConfig from '../../config/slack';
 
 import workController from './workTimeController'
 import meetingController from "./meetingController";
-import viewController from "./viewController";
+
 import workTimeController from "./workTimeController";
 import {dbs} from "../commons/globals";
 
@@ -89,18 +89,22 @@ class slackController {
                 })
                 .catch(() => {
                     res.sendStatus(500);
+                    this.initLocalData(user.id);
                 })
 
-        } else if (actions && actions[0].action_id.match(/work_end/)) {
+        }
+        else if (actions && actions[0].action_id.match(/work_end/)) {
             await workController.workEnd(user, trigger_id)
                 .then(() => {
                     res.sendStatus(200);
                 })
                 .catch(() => {
                     res.sendStatus(500);
+                    this.initLocalData(user.id);
                 })
 
-        } else if (actions && actions[0].action_id.match(/work_history/)) {
+        }
+        else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
             const result = await workController.workHistory(user, historyDuration);
 
@@ -119,9 +123,11 @@ class slackController {
                 })
                 .catch(() => {
                     res.sendStatus(500);
+                    this.initLocalData(user.id);
                 });
 
-        } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
+        }
+        else if (actions && actions[0].action_id.match(/meeting_booking/)) {
             tempSaver.createData(user.id);
 
             await this.openMeetingModal(trigger_id)
@@ -130,10 +136,12 @@ class slackController {
                 })
                 .catch((e) => {
                     res.sendStatus(500);
+                    this.initLocalData(user.id);
                 })
 
 
-        } else if (actions && actions[0].action_id.match(/meeting_list/)) {
+        }
+        else if (actions && actions[0].action_id.match(/meeting_list/)) {
             const clickedType = actions[0].value
             const result = await meetingController.meetingList(user, trigger_id, clickedType)
 
@@ -145,76 +153,42 @@ class slackController {
             ]
             await this.displayHome(user.id, list_block)
 
-        } else if (actions && actions[0].action_id.match(/room_number/)) {
+        }
+        else if (actions && actions[0].action_id.match(/room_number/)) {
+
             const form: any = tempSaver.updateRoom(user.id, actions[0].selected_option.value);
-            const result = timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
+            const result: any = await this.timeList(form)
+            const modal = await blockManager.updateModal(form,  result, this.isEdit)
 
-            const modal = await blockManager.updateModal(form, await result, this.isEdit)
+            await this.updateModal(modal,container.view_id)
 
-            const args = {
-                token: slackConfig.token,
-                view: JSON.stringify(modal),
-                view_id: container.view_id
-            };
-
-            console.log(await axios.post('https://slack.com/api/views.update', qs.stringify(args)))
-            res.sendStatus(200);
-        } else if (actions && actions[0].action_id.match(/meeting_title/)) {
+        }
+        else if (actions && actions[0].action_id.match(/meeting_title/)) {
             tempSaver.updateTitle(user.id, actions[0].value)
 
             res.sendStatus(200);
-        } else if (actions && actions[0].action_id.match(/description/)) {
+        }
+        else if (actions && actions[0].action_id.match(/description/)) {
             tempSaver.updateDesc(user.id, actions[0].value)
 
             res.sendStatus(200);
-        } else if (actions && actions[0].action_id.match(/selected_date/)) {
-            let result !: any
+        }
+        else if (actions && actions[0].action_id.match(/selected_date/)) {
+
             const form = tempSaver.updateDate(user.id, actions[0].selected_date);
-            console.log(form)
+            const result: any = await this.timeList(form)
+            const modal = await blockManager.updateModal(form, result, this.isEdit)
 
-            //오늘 날짜 선택한 경우
-            const remainder = 15 - moment().minute() % 15
-            if (actions[0].selected_date === moment().format('yyyy-MM-DD')) {
-                result = timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
-            } else {
-                result = timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
-            }
-            const modal = await blockManager.updateModal(form, await result, this.isEdit)
-
-            const args = {
-                token: slackConfig.token,
-                view: JSON.stringify(modal),
-                view_id: container.view_id
-            };
-
-            console.log(await axios.post('https://slack.com/api/views.update', qs.stringify(args)))
+            await this.updateModal(modal,container.view_id)
 
         } else if (actions && actions[0].action_id.match(/meeting_duration/)) {
             const duration = actions[0].selected_option.value
             const form: any = tempSaver.updateDuration(user.id, duration)
 
-            let result !: any
+            const result: any = await this.timeList(form)
+            const modal = await blockManager.updateModal(form,  result, this.isEdit)
 
-            //오늘 날짜 선택한 경우
-            const remainder = 15 - moment().minute() % 15
-            if (form.date === moment().format('yyyy-MM-DD')) {
-
-                result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
-            } else {
-                result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
-            }
-
-
-            // const result: any = timeManager.timeList(duration, this.businessTime, form.date, form.room_number)
-            const modal: any = await blockManager.updateModal(form, result, this.isEdit)
-
-
-            const args = {
-                token: slackConfig.token,
-                view: JSON.stringify(modal),
-                view_id: container.view_id
-            };
-            console.log(await axios.post('https://slack.com/api/views.update', qs.stringify(args)))
+            await this.updateModal(modal,container.view_id)
 
 
         } else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
@@ -228,23 +202,10 @@ class slackController {
                 const form: any = await tempSaver.createEditDate(meetingInfo, user.id);
 
 
-                const result: any = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
-                const modal: any = await blockManager.updateModal(form, result, this.isEdit);
+                const result: any = await this.timeList(form)
+                const modal = await blockManager.updateModal(form,  result, this.isEdit)
 
-                const args = {
-                    token: slackConfig.token,
-                    view: JSON.stringify(modal),
-                    trigger_id: trigger_id,
-                };
-
-                await axios.post('https://slack.com/api/views.open', qs.stringify(args))
-                    .then((response:any) => {
-                        console.log(response)
-                        res.sendStatus(200);
-                    })
-                    .catch(() => {
-                        res.sendStatus(500);
-                    })
+                await this.updateModal(modal,container.view_id)
 
             } else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
 
@@ -267,40 +228,20 @@ class slackController {
                     })
                     .catch(() => {
                         res.sendStatus(500);
+                        this.initLocalData(user.id);
                     })
 
 
             }
 
-        } else if (actions && actions[0].action_id.match(/meeting_start/)) {
-            // const modalForm = meetingController.createMeetingForm(payload.view, user).createMeeting
-
-            // const modal = blockManager.updateEndTimeModal(modalForm, this.bookedMeetings, actions[0].selected_option.value)
-            //
-            // const args = {
-            //     token: slackConfig.token,
-            //     view: JSON.stringify(modal),
-            //     view_id: container.view_id
-            // };
-            //
-            // const result = await axios.post('https://slack.com/api/views.update', qs.stringify(args));
-            //
-            // console.log(result)
-
-        } else if (actions && actions[0].action_id.match(/meeting_time/)) {
+        }  else if (actions && actions[0].action_id.match(/meeting_time/)) {
 
             if (actions[0].selected_option.value === 'null') {
                 const form = tempSaver.updateDate(user.id, moment().add(1, 'day').format('yyyy-MM-DD'))
-                const result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
-                const modal: any = await blockManager.updateModal(form, result, this.isEdit)
+                const result: any = await this.timeList(form)
+                const modal = await blockManager.updateModal(form,  result, this.isEdit)
 
-
-                const args = {
-                    token: slackConfig.token,
-                    view: JSON.stringify(modal),
-                    view_id: container.view_id
-                };
-                await axios.post('https://slack.com/api/views.update', qs.stringify(args))
+                await this.updateModal(modal,container.view_id)
             } else {
                 tempSaver.updateTime(user.id, actions[0].selected_option.value)
             }
@@ -359,6 +300,8 @@ class slackController {
     };
 
 
+
+
     sendDm = async (userList: string[], user: any, meetingInfo: any) => {
 
         for (let i = 0; i < userList.length; i++) {
@@ -380,8 +323,31 @@ class slackController {
         const userId = _.map(result, (user) => {
             return user.dataValues.user_id
         })
-
         return userId
+
+    }
+
+    async updateModal(modal:any, view_id: any) {
+        const args = {
+            token: slackConfig.token,
+            view: JSON.stringify(modal),
+            view_id: view_id
+        };
+
+        await axios.post('https://slack.com/api/views.update', qs.stringify(args))
+    }
+
+    async timeList(form:any){
+        let result !: any
+        //오늘 날짜 선택한 경우
+        const remainder = 15 - moment().minute() % 15
+        if (form.date === moment().format('yyyy-MM-DD')) {
+            result =await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
+        } else {
+            result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
+        }
+
+        return result;
 
     }
 

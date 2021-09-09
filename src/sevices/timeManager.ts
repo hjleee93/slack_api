@@ -10,41 +10,34 @@ class TimeManager {
         let closeTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
         let startTime = moment(businessTime[0], 'HH:mm');
         let timeList: any[] = [businessTime[0]];
-        let result :any[] = [];
+        let result: any[] = [];
 
         // if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD')) {
 
-            //15분 기준으로 예약 가능 closeTime
-            while (startTime < closeTime) {
-                timeList.push(startTime.add(15, 'm').format('HH:mm'))
+        //15분 기준으로 예약 가능 closeTime
+        while (startTime < closeTime) {
+            timeList.push(startTime.add(15, 'm').format('HH:mm'))
+        }
+
+        result = _.map(timeList, (time: any) => {
+            let endTime = moment(time, 'HH:mm').add(duration, 'm');
+
+            // if (endTime <= startTime){
+            return {
+                "text": {
+                    "type": "plain_text",
+                    "text": `${time} - ${endTime.format('HH:mm')}`,
+                    "emoji": true
+                },
+                "value": `${time}-${endTime.format('HH:mm')}`
             }
 
-            result = _.map(timeList, (time: any) => {
-                let endTime = moment(time, 'HH:mm').add(duration, 'm');
 
-                // if (endTime <= startTime){
-                    return {
-                        "text": {
-                            "type": "plain_text",
-                            "text": `${time} - ${endTime.format('HH:mm')}`,
-                            "emoji": true
-                        },
-                        "value": `${time}-${endTime.format('HH:mm')}`
-                    }
+        })
 
+        const checkTime = await this.checkDupTime(result, room_number, new Date(date))
 
-
-            })
-
-        return result[0] ?  (await this.checkDupTime(result, room_number, new Date(date))) : [{
-            "text": {
-                "type": "plain_text",
-                "text": '예약가능한 시간이 없습니다.',
-                "emoji": true
-            },
-            "value": 'null'
-        }]
-
+        return result[0] ? checkTime : blockManager.noAbleTime()
 
     }
 
@@ -57,15 +50,22 @@ class TimeManager {
 
         _.some(result, (meeting: any) => {
             _.some(originList, (list: any, i: number) => {
+
                 if (list.value.split('-')[0] === meeting.start) {
-                    startIdx = i;
+                    if (!startIdx) {
+                        startIdx = i;
+                    }
                 }
-               else if (list.value.split('-')[1] === meeting.start) {
-                    startIdx = i+1;
-                } else if (list.value.split('-')[0] === meeting.end) {
+                if (list.value.split('-')[1] === meeting.start) {
+                    if (!startIdx) {
+                        startIdx = i + 1;
+                    }
+                }
+                if (list.value.split('-')[0] === meeting.end) {
                     endIdx = i;
                     // return true;
-                } else if (list.value.split('-')[1] === meeting.end) {
+                }
+                if (list.value.split('-')[1] === meeting.end) {
                     endIdx = originList.length;
                     // return true;
                 }
@@ -73,9 +73,12 @@ class TimeManager {
 
             if ((startIdx || startIdx === 0) && endIdx) {
                 originList.splice(startIdx, endIdx - startIdx);
-                startIdx = undefined;
-                endIdx = undefined;
+
+            }else if(!startIdx && endIdx ){
+                originList.splice(0, endIdx);
             }
+            startIdx = undefined;
+            endIdx = undefined;
         })
 
 
