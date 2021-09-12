@@ -25,6 +25,8 @@ class ParticipantModel extends Model {
         const result = await this.findAll({meeting_id : meeting_id})
         return result;
     }
+
+
 }
 
 
