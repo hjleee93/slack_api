@@ -2,9 +2,11 @@ import tempSaver from "./tempSaver";
 import blockManager from "./blockManager";
 import slackConfig from "../../config/slack";
 import axios from "axios";
-import qs from "qs";
+import * as qs from "qs";
 import * as moment from "moment-timezone";
 import timeManager from "./timeManager";
+import {dbs} from "../commons/globals";
+import * as _ from "lodash";
 
 
 class SlackManager {
@@ -18,51 +20,228 @@ class SlackManager {
         this.meetingId = 0;
     }
 
-    async event(req: any) {
-        const {type, user, channel, tab, text, subtype} = req.body.event;
-        if (type === 'app_home_opened') {
-            let homeBlock = [
-                ...blockManager.workSection(),
-                blockManager.divider(),
-                ...blockManager.meetingSection()
+    async events(params: any) {
+        const {type, user, channel, tab, text, subtype} = params;
+        if(user) {
+            const startTime = await dbs.WorkLog.hasWorkStart(user)
 
-            ]
-            await this.displayHome(user, homeBlock);
+            if (type === 'app_home_opened') {
+                let homeBlock = [
+                    blockManager.home.header(),
+                    blockManager.home.workAlarm(startTime ? startTime.start : ''),
+                    ...blockManager.workSection(),
+                    blockManager.divider(),
+                    ...blockManager.meetingSection()
+                ]
+                await this.displayHome(user, homeBlock);
+            }
         }
+        return params
     }
 
-    // action(){
-    //     //modal submission
-    //     if (type === 'view_submission') {
-    //
-    //         const submitType = view.submit.text
-    //
-    //         if (submitType.toLowerCase() === 'edit') {
-    //
-    //             await meetingController.editMeeting(tempSaver.meetingForm(user.id), this.meetingId, user)
-    //                 .then(() => {
-    //                     res.send(blockManager.updateConfirmModal("예약 수정이 완료되었습니다."))
-    //                 })
-    //                 .catch((e) => {
-    //                     res.send(blockManager.updateConfirmModal(e.message))
-    //                 })
-    //
-    //         }
-    //         else {
-    //             await meetingController.createMeeting(tempSaver.meetingForm(user.id), user)
-    //                 .then(() => {
-    //                     res.send(blockManager.updateConfirmModal("예약이 완료되었습니다."))
-    //                 })
-    //                 .catch((e) => {
-    //                     res.send(blockManager.updateConfirmModal(e.message))
-    //                 })
-    //         }
-    //         this.initLocalData(user.id);
-    //     }
-    //     else if (type === "view_closed") {
-    //         this.initLocalData(user.id);
-    //     }
-    // }
+    async actions(payload: any) {
+        const {token, trigger_id, user, actions, type, container, view} = JSON.parse(payload);
+        let startTime = await dbs.WorkLog.hasWorkStart(user.id)
+
+
+        //modal submission
+        if (type === 'view_submission') {
+
+            const submitType = view.submit.text
+
+            if (submitType.toLowerCase() === 'edit') {
+
+              console.log(  await dbs.Meeting.editMeeting(tempSaver.meetingForm(user.id), this.meetingId, user))
+                // .then(() => {
+                //     res.send(blockManager.updateConfirmModal("예약 수정이 완료되었습니다."))
+                // })
+                // .catch((e) => {
+                //     res.send(blockManager.updateConfirmModal(e.message))
+                // })
+
+            } else {
+                await dbs.Meeting.createMeeting(tempSaver.meetingForm(user.id), user)
+                // .then(() => {
+                //     res.send(blockManager.updateConfirmModal("예약이 완료되었습니다."))
+                // })
+                // .catch((e) => {
+                //     res.send(blockManager.updateConfirmModal(e.message))
+                // })
+            }
+            this.initLocalData(user.id);
+        } else if (type === "view_closed") {
+            this.initLocalData(user.id);
+        }
+        if (actions && actions[0].action_id.match(/work_start/)) {
+
+            const workLog = await dbs.WorkLog.workStart(user, trigger_id);
+
+            if (!workLog) {
+                await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
+                startTime = await dbs.WorkLog.hasWorkStart(user.id)
+            } else {
+                await blockManager.openConfirmModal(trigger_id, '이미 출근처리되었습니다.');
+            }
+
+            const blocks = [
+                blockManager.home.header(),
+                blockManager.home.workAlarm(startTime ? startTime.start : ''),
+                ...blockManager.workSection(),
+                blockManager.divider(),
+                ...blockManager.meetingSection(),
+            ]
+            await this.displayHome(user.id, blocks)
+
+        } else if (actions && actions[0].action_id.match(/work_end/)) {
+            await dbs.WorkLog.workEnd(user, trigger_id)
+            // .then(() => {
+            //     res.sendStatus(200);
+            // })
+            // .catch(() => {
+            //     res.sendStatus(500);
+            //     this.initLocalData(user.id);
+            // })
+
+        }
+        else if (actions && actions[0].action_id.match(/work_history/)) {
+            const historyDuration = actions[0].value;
+            const workHistory = await dbs.WorkLog.workHistory(user.id, historyDuration);
+
+            //@ts-ignore
+            const sortedHistory = workHistory.sort((a: any, b: any) => new Date(b.start) - new Date(a.start))
+
+            const result = _.map(sortedHistory, (log: any) => {
+                return blockManager.history.body(log)
+            })
+
+            const history_block = [
+                blockManager.home.header(),
+                ...blockManager.workSection(),
+                blockManager.history.title(historyDuration),
+                blockManager.history.header(),
+                ...result,
+                blockManager.divider(),
+                ...blockManager.meetingSection()
+            ]
+
+            await this.displayHome(user.id, history_block)
+
+
+        }
+        else if (actions && actions[0].action_id.match(/meeting_booking/)) {
+            tempSaver.createData(user.id);
+
+            await this.openMeetingModal(trigger_id)
+            // .then(() => {
+            //     res.sendStatus(200);
+            // })
+            // .catch((e) => {
+            //     res.sendStatus(500);
+            //     this.initLocalData(user.id);
+            // })
+
+
+        }
+        else if (actions && actions[0].action_id.match(/meeting_list/)) {
+            const clickedType = actions[0].value
+            const meetingList = await dbs.Meeting.meetingList(user, trigger_id, clickedType)
+
+            const list_block = [
+                ...blockManager.workSection(),
+                blockManager.divider(),
+                ...blockManager.meetingSection(),
+                ...meetingList,
+            ]
+            console.log(await this.displayHome(user.id, list_block))
+
+        }
+        else if (actions && actions[0].action_id.match(/room_number/)) {
+
+            const form: any = tempSaver.updateRoom(user.id, actions[0].selected_option.value);
+            const result: any = await this.timeList(form)
+            const modal = await blockManager.updateModal(form, result, this.isEdit)
+
+            await this.updateModal(modal, container.view_id)
+
+        }
+        else if (actions && actions[0].action_id.match(/meeting_title/)) {
+            tempSaver.updateTitle(user.id, actions[0].value)
+
+        } else if (actions && actions[0].action_id.match(/description/)) {
+            tempSaver.updateDesc(user.id, actions[0].value)
+        } else if (actions && actions[0].action_id.match(/selected_date/)) {
+
+            const form = tempSaver.updateDate(user.id, actions[0].selected_date);
+            const result: any = await this.timeList(form)
+            const modal = await blockManager.updateModal(form, result, this.isEdit)
+
+            await this.updateModal(modal, container.view_id)
+
+        } else if (actions && actions[0].action_id.match(/meeting_duration/)) {
+            const duration = actions[0].selected_option.value
+            const form: any = tempSaver.updateDuration(user.id, duration)
+
+            const result: any = await this.timeList(form)
+            const modal = await blockManager.updateModal(form, result, this.isEdit)
+
+            await this.updateModal(modal, container.view_id)
+
+
+        }
+        else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
+            tempSaver.deleteForm(user.id);
+            const meeting_id = actions[0].selected_option.value
+
+            if (actions[0].selected_option.text.text.toLowerCase() === 'edit') {
+                this.isEdit = true
+                this.meetingId = meeting_id;
+                const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
+                const form: any = await tempSaver.createEditDate(meetingInfo, user.id);
+
+                const result: any = await this.timeList(form[user.id]);
+                const modal = await blockManager.updateModal(form[user.id], result, this.isEdit);
+
+                await this.openEditModal(modal, trigger_id);
+
+            } else if (actions[0].selected_option.text.text.toLowerCase() === 'delete') {
+
+                const deleteMeeting = await dbs.Meeting.deleteMeeting(meeting_id)
+                if (deleteMeeting === 1) {
+                    await blockManager.openConfirmModal(trigger_id, '해당 예약은 삭제되었습니다.');
+                }
+
+                const meetingList = await dbs.Meeting.meetingList(user, trigger_id)
+
+                const list_block = [
+                    ...blockManager.workSection(),
+                    blockManager.divider(),
+                    ...blockManager.meetingSection(),
+                    ...meetingList
+
+                ]
+                await this.displayHome(user.id, list_block)
+
+
+            }
+
+        } else if (actions && actions[0].action_id.match(/meeting_time/)) {
+
+            if (actions[0].selected_option.value === 'null') {
+                const form = tempSaver.updateDate(user.id, moment().add(1, 'day').format('yyyy-MM-DD'))
+                const result: any = await this.timeList(form)
+                const modal = await blockManager.updateModal(form, result, this.isEdit)
+
+                await this.updateModal(modal, container.view_id)
+            } else {
+                tempSaver.updateTime(user.id, actions[0].selected_option.value)
+            }
+
+
+        } else if (actions && actions[0].action_id.match(/participant_list/)) {
+            tempSaver.updateMembers(user.id, actions[0].selected_users)
+        }
+
+    }
 
 
     displayHome = async (user_id: any, block: any) => {
@@ -113,6 +292,7 @@ class SlackManager {
         };
 
         await axios.post('https://slack.com/api/views.update', qs.stringify(args))
+
     }
 
     async timeList(form: any) {
@@ -121,8 +301,7 @@ class SlackManager {
         const remainder = 15 - moment().minute() % 15
         if (form.date === moment().format('yyyy-MM-DD')) {
             result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
-        }
-        else {
+        } else {
             result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);
         }
 
@@ -132,7 +311,7 @@ class SlackManager {
 
     async getUserInfo(user_id: string) {
         return await axios.get('https://slack.com/api/users.info', {
-            headers: {Authorization:`Bearer ${slackConfig.token}`},
+            headers: {Authorization: `Bearer ${slackConfig.token}`},
             params: {
                 user: user_id
             }
@@ -143,6 +322,18 @@ class SlackManager {
     openMeetingModal = async (trigger_id: any) => {
 
         const modal = await blockManager.meetingModal()
+
+        const args = {
+            token: slackConfig.token,
+            trigger_id: trigger_id,
+            view: JSON.stringify(modal)
+        };
+
+        await axios.post('https://slack.com/api/views.open', qs.stringify(args));
+
+    };
+
+    openEditModal = async (modal: any, trigger_id: any) => {
 
         const args = {
             token: slackConfig.token,

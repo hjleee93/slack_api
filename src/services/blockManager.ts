@@ -43,8 +43,8 @@ class BlockManager {
     }
 
     meeting = {
-        list(meeting: any, memberNameList: any) {
-            return {
+        list: (meeting: any, memberNameList: any) => {
+            return   {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
@@ -74,13 +74,33 @@ class BlockManager {
                                 "emoji": true
                             },
                             "value": `${meeting.id}`
-
                         }
                     ]
                 },
-
             }
         }
+    }
+
+    home = {
+        header: () =>{
+            return {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "FTR",
+                    "emoji": true
+                }
+            }
+        },
+        workAlarm: (time?:Date) => {
+            return {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `${time ? `${moment(time).format('MM월 DD일')} 출근시간 : *${moment(time).format('HH시 mm분 ss초 ')}*` : `*출근하세요*`}`
+                }
+            }
+        },
     }
 
     noAbleTime() {
@@ -137,14 +157,6 @@ class BlockManager {
 
     workSection() {
         const blocks = [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "FTR",
-                    "emoji": true
-                }
-            },
             {
 
                 "type": "actions",
@@ -502,7 +514,7 @@ class BlockManager {
         let initMember = {}
         let initSelectedTime = {}
 
-        if (initData.members) {
+        if (initData.members.length > 0) {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -522,8 +534,7 @@ class BlockManager {
                     "emoji": true
                 }
             }
-        }
-        else {
+        } else {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -572,8 +583,7 @@ class BlockManager {
                 "action_id": "meeting_time"
             }
 
-        }
-        else {
+        } else {
             initSelectedTime =
                 {
                     "type": "static_select",
@@ -784,8 +794,7 @@ class BlockManager {
                     "emoji": true
                 }
             }
-        }
-        else {
+        } else {
             initMember = {
                 "type": "input",
                 dispatch_action: true,

@@ -1,5 +1,5 @@
 import Model from '../../../_base/model';
-import {DataTypes, Op, Sequelize, Transaction} from 'sequelize';
+import {DataTypes, Op, Sequelize, Transaction, where} from 'sequelize';
 import {dbs} from '../../../../commons/globals';
 import * as moment from "moment-timezone";
 import blockManager from "../../../../services/blockManager";
@@ -36,20 +36,17 @@ class WorkLogModel extends Model {
             user_id,
             start: moment().toDate()
         }
-        const isWorkStart = await this.hasWorkStart(user_id, transaction)
+        const isWorkStart = await this.hasWorkStart(user_id)
 
         if (!isWorkStart) {
             if (!dbs.User.findUser(user_id)) {
                 await dbs.User.create(userInfo, transaction)
             }
-
             await this.model.create(workStart, transaction)
-            await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
+            return false;
+        }else{
+            return true;
         }
-        else {
-            await blockManager.openConfirmModal(trigger_id, '이미 출근처리되었습니다.');
-        }
-
     }
 
     async workEnd(user: any, trigger_id: any, transaction?: Transaction) {
@@ -61,21 +58,21 @@ class WorkLogModel extends Model {
 
         if (isWorkEnd) {
             await blockManager.openConfirmModal(trigger_id, '이미 퇴근하셨습니다.');
-        }
-        else if (isWorkStart) {
+        } else if (isWorkStart) {
+
             const workDone = await this.model.update({end: moment().toDate()}, {
-                user_id: user_id,
-                id: isWorkStart.id
+                where: {
+                    user_id: user_id,
+                    id: isWorkStart.id
+                }
             }, transaction);
 
             if (workDone[0] === 1) {
-                await blockManager.openConfirmModal(trigger_id, '퇴근 처리되었습니다. ');
-            }
-            else {
+                await blockManager.openConfirmModal(trigger_id, '퇴근 처리되었습니다.');
+            } else {
                 await blockManager.openConfirmModal(trigger_id, '퇴근 처리에 실패하였습니다.');
             }
-        }
-        else {
+        } else {
             await blockManager.openConfirmModal(trigger_id, '출근기록이 없습니다. 출근 버튼 먼저 눌러주세요');
         }
 
@@ -83,10 +80,11 @@ class WorkLogModel extends Model {
 
     async workHistory(user_id: string, historyDuration: string) {
 
-        return await this.model.findAll({
-            user_id,
-            start: {
-                [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
+        return await this.model.findAll({where: {
+                user_id,
+                start: {
+                    [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
+                }
             }
         })
 
@@ -99,7 +97,7 @@ class WorkLogModel extends Model {
                 start: {
                     //범위
                     [Op.lte]: moment().toDate(),
-                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
+                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:00'),
                 }
             }
         })

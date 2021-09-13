@@ -1,6 +1,5 @@
-import { NextFunction, Response, Request } from 'express';
+import {NextFunction, Response, Request} from 'express';
 import * as _ from 'lodash';
-
 
 
 export const responseError = (res: Response, error: Error, statusCode: number = 400) => {
@@ -8,8 +7,7 @@ export const responseError = (res: Response, error: Error, statusCode: number = 
         res.status(statusCode).send({
             error: JSON.parse(error.message),
         })
-    }
-    catch (e) {
+    } catch (e) {
         res.status(statusCode).send({
             error: error.message,
         })
@@ -17,35 +15,29 @@ export const responseError = (res: Response, error: Error, statusCode: number = 
 };
 
 export default function convert(func: Function, middleware: boolean = false) {
-    console.log(func)
 
     function response(res: Response, result: any) {
-        res.header('Last-Modified', (new Date()).toUTCString());
-        if( result instanceof Error ) {
+        // res.header('Last-Modified', (new Date()).toUTCString());
+        if (result instanceof Error) {
             return responseError(res, result);
         }
 
-        return res.status(200).send({
-            result: result || {}
-        });
+        return res.status(200).send(result);
     }
 
     return async (req: Request, res: Response, next: NextFunction) => {
-        console.log(req, res)
-
         try {
+
             const params = _.assignIn({}, req.body, req.query, req.params);
 
-            // const user = req.user? _.assignIn({}, req.user) : null
-            console.log(func)
-            const result = await func(params, undefined, { req, res });
+            const result = await func(params , undefined, {req, res});
 
-            if ( middleware ) {
+            if (middleware) {
                 return next();
             }
             response(res, result);
-        }
-        catch(e) {
+        } catch (e) {
+            console.log(e)
             response(res, e);
         }
     }

@@ -25,29 +25,34 @@ class MeetingModel extends Model {
     }
 
     async meetingInfo(meeting_id: string) {
-        const result = await this.findOne({
-            id: meeting_id
+        const result = await this.model.findOne({
+            where: {
+                id: meeting_id
+            }
         })
         return result;
     }
 
     async hasMeetingOnDate(date: Date, room_number: string) {
-        const result = await this.findAll({date: date, room_number: room_number});
+        const result = await this.model.findAll({where: {date: date, room_number: room_number}});
         return result;
     }
 
     async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string) {
 
-        const result = await this.findAll({
-            start: {[Op.gte]: start, [Op.lt]: end},
-            room_number: room_number,
-            date: date
+        const result = await this.model.findAll({
+            where:
+                {
+                    start: {[Op.gte]: start, [Op.lt]: end},
+                    room_number,
+                    date: date
+                }
         });
         return result;
     }
 
-    async deleteMeeting(meeting_id: string){
-        const result = await  this.destroy({id: meeting_id});
+    async deleteMeeting(meeting_id: string) {
+        const result = await this.model.destroy({where: {id: meeting_id}});
         return result;
     }
 
@@ -66,7 +71,7 @@ class MeetingModel extends Model {
         return createMeeting
     }
 
-    async createMeeting(data: any, user: any){
+    async createMeeting(data: any, user: any) {
         return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
 
             const participantList: any = [];
@@ -103,7 +108,15 @@ class MeetingModel extends Model {
 
     meetingList = async (user: any, trigger_id: any, clickedType?: string) => {
 
-        const meetingList = await dbs.Meeting.findAll()
+        const meetingList = await this.model.findAll({
+            where: {
+                date: {
+                    [Op.gte]: moment().toDate(),
+                }
+            }
+        })
+
+        console.log(meetingList)
 
         //@ts-ignore
         const list = meetingList.sort((a: any, b: any) => new Date(b.date) - new Date(a.date));
@@ -121,11 +134,11 @@ class MeetingModel extends Model {
 
             if (!meeting.deleted_at) {
                 return blockManager.meeting.list(meeting, memberNameList);
-            }
-            else {
+            } else {
                 return null;
             }
         }));
+
 
         return result.filter((element, i) => element !== null);
     }
@@ -164,12 +177,10 @@ class MeetingModel extends Model {
                     participantList.push(obj)
                 }
 
-                // throw new Error()
                 await dbs.Participant.destroy({meeting_id: meeting_id});
 
                 await dbs.Participant.bulkCreate(participantList, transaction);
-            }
-            else {
+            } else {
 
                 throw new Error('이미 등록된 예약이 있습니다.')
             }

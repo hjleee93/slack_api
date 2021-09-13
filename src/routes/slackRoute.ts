@@ -4,7 +4,7 @@ import convert from "../controllers/_convert";
 
 export default (router: Router) => {
 
-    router.post('/slack/events', slackController.event);
-    router.post('/slack/actions', slackController.actions);
+    router.post('/slack/events', convert(slackController.events));
+    router.post('/slack/actions', convert(slackController.actions));
 
 }

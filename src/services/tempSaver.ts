@@ -4,22 +4,23 @@ import * as moment from "moment-timezone";
 import {dbs} from "../commons/globals";
 
 class TempSaver {
-    private obj: any [] = [];
+    private obj:any = {};
 
     createData(user_id: string) {
-        this.obj.push(
-            {
-                id: user_id,
-                room_number: blockManager.meetingRoomArr[0],
-                title: '',
-                description: '',
-                date: moment().format('yyyy-MM-DD'),
-                duration: 30,
-                start: '',
-                end: '',
-                members: []
+        this.obj = {
+            [user_id]:
+                {
+                    room_number: blockManager.meetingRoomArr[0],
+                    title: '',
+                    description: '',
+                    date: moment().format('yyyy-MM-DD'),
+                    duration: 30,
+                    start: '',
+                    end: '',
+                    members: []
 
-            })
+                }
+        }
         return this.obj;
     }
     async createEditDate(data: any, user_id: string) {
@@ -28,9 +29,9 @@ class TempSaver {
         const members = _.map(memberList, (list:any)=>{
             return list.user_id
         })
-        this.obj.push(
+
+        this.obj[user_id] =
             {
-                id: user_id,
                 room_number: data.room_number,
                 title: data.title,
                 description: data.description,
@@ -39,25 +40,31 @@ class TempSaver {
                 start: data.start,
                 end: data.end,
                 members: members
-            })
-        return this.obj[0];
+            }
+
+        return this.obj;
     }
 
     deleteForm(user_id: any) {
-        this.obj.filter((form: any, index: number) => {
-            if (form.id === user_id) {
-                this.obj.splice(index, 1);
-            }
-        })
+        // this.obj.filter((form: any, index: number) => {
+        //     if (form.id === user_id) {
+        //         this.obj.splice(index, 1);
+        //     }
+        // })
+        //
+        delete this.obj[user_id]
     }
 
     meetingForm(user_id: any) {
-        const form = this.obj.filter((form: any) => {
-            if (form.id === user_id) {
-                return form;
-            }
-        })
-        return form[0];
+        // const form = this.obj.filter((form: any) => {
+        //     if (form.id === user_id) {
+        //         return form;
+        //     }
+        // })
+        //
+        //
+        // console.log(form)
+        return this.obj[user_id];
     }
 
     updateDate(user_id: any, date: any) {
@@ -80,13 +87,13 @@ class TempSaver {
     }
 
     updateRoom(user_id: any, room_number: string) {
-        const form =    this.obj.filter((form: any) => {
+        const form =    this.obj.some((form: any) => {
             if (form.id === user_id) {
                 form.room_number = room_number;
                 return form;
             }
         })
-        return form[0];
+        return form;
     }
 
     updateDesc(user_id: any, desc: string) {
