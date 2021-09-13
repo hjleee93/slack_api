@@ -5,6 +5,7 @@ import slackConfig from "../../config/slack";
 import axios from "axios";
 import * as qs from "qs";
 import timeManager from "./timeManager";
+import slackManager from "./slackManager";
 
 class BlockManager {
     public meetingRoomArr = ['302', '402'];
@@ -136,21 +137,22 @@ class BlockManager {
     dmJson(meetingInfo: any) {
 
         const blocks = [
+
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": ":calendar: 미팅에 초대되었습니다."
+                    "text": "미팅에 초대되었습니다."
                 }
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*${meetingInfo.title}* \n\`${meetingInfo.date} ${meetingInfo.start} ~ ${meetingInfo.end}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('yyyy-MM-DD')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH시 mm분')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH시 mm분')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
-            },
+            },  this.divider()
         ]
         return blocks;
     }
@@ -305,7 +307,7 @@ class BlockManager {
     }
 
     async meetingModal() {
-        const currTime = moment()
+        const currTime = moment().isBefore(moment(slackManager.businessTime,'HH:mm')) ? moment(slackManager.businessTime, 'HH:mm') : moment()
         //시간 반올림
         const remainder = 15 - currTime.minute() % 15
 
@@ -558,10 +560,10 @@ class BlockManager {
             timeList.unshift({
                 "text": {
                     "type": "plain_text",
-                    "text": `${initData.start} - ${initData.end}`,
+                    "text": `${moment(initData.start, 'HH:mm').format('HH:mm')} - ${moment(initData.end, 'HH:mm').format('HH:mm')}`,
                     "emoji": true
                 },
-                "value": `${initData.start}-${initData.end}`
+                "value": `${moment(initData.start, 'HH:mm').format('HH:mm')}-${moment(initData.end, 'HH:mm').format('HH:mm')}`
             })
 
             initSelectedTime = {
@@ -575,10 +577,10 @@ class BlockManager {
                 initial_option: {
                     "text": {
                         "type": "plain_text",
-                        "text": `${initData.start} - ${initData.end}`,
+                        "text": `${moment(initData.start, 'HH:mm').format('HH:mm')} - ${moment(initData.end, 'HH:mm').format('HH:mm')}`,
                         "emoji": true
                     },
-                    "value": `${initData.start}-${initData.end}`
+                    "value": `${moment(initData.start, 'HH:mm').format('HH:mm')}-${moment(initData.end, 'HH:mm').format('HH:mm')}`
                 },
                 "action_id": "meeting_time"
             }
@@ -618,10 +620,10 @@ class BlockManager {
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": initData.room_number,
+                                "text": `${initData.room_number}`,
                                 "emoji": true
                             },
-                            "value": initData.room_number
+                            "value":`${initData.room_number}`
                         },
                         "action_id": "room_number"
                     },
@@ -676,7 +678,7 @@ class BlockManager {
                     dispatch_action: true,
                     "element": {
                         "type": "datepicker",
-                        "initial_date": initData.date,
+                        "initial_date": moment(initData.date).format('yyyy-MM-DD') ,
                         "action_id": "selected_date"
                     },
                     "label": {
@@ -1070,7 +1072,7 @@ class BlockManager {
             view: JSON.stringify(blocks)
         };
 
-        await axios.post('https://slack.com/api/views.open', qs.stringify(args));
+       console.log( await axios.post('https://slack.com/api/views.open', qs.stringify(args)))
 
     };
 
