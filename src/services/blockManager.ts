@@ -9,18 +9,18 @@ import timeManager from "./timeManager";
 class BlockManager {
     public meetingRoomArr = ['302', '402'];
 
-     history = {
-         title(duration:any){
-             return {
-                 "type": "header",
-                     "text": {
-                     "type": "plain_text",
-                         "text": `${moment().subtract(duration, 'days').format('yyyy-MM-DD')} ~ ${moment().format('yyyy-MM-DD')} 출퇴근 기록`,
-                         "emoji": true
-                 }
-             }
-         },
-        header(){
+    history = {
+        title(duration: any) {
+            return {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": `${moment().subtract(duration, 'days').format('yyyy-MM-DD')} ~ ${moment().format('yyyy-MM-DD')} 출퇴근 기록`,
+                    "emoji": true
+                }
+            }
+        },
+        header() {
             return {
                 "type": "section",
                 "text": {
@@ -28,12 +28,63 @@ class BlockManager {
                     "text": "*-------------------------------------------------------------------------*\n          *날짜         |          출근 시간          |          퇴근 시간          *\n*-------------------------------------------------------------------------*"
                 }
             }
+        },
+        body(log: any) {
+            return {
+                "type": "section",
+                "text":
+                    {
+                        "type": "mrkdwn",
+                        "text": `${new Date(log.start).toLocaleDateString()}     *|*       ${new Date(log.start).toLocaleTimeString()}      *|*      ${log.end ? new Date(log.end).toLocaleTimeString() : '퇴근 기록이 없습니다.'}\n*-------------------------------------------------------------------------*`
+                    }
+            }
         }
 
     }
 
-    noAbleTime(){
-         const block =  [{
+    meeting = {
+        list(meeting: any, memberNameList: any) {
+            return {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `📢*${meeting.title}* \n\n 참석자 : ${_.map(memberNameList, (name: any) => {
+                        return ' ' + name
+                    })}\n\n \`\`\`${moment(meeting.date, 'yyyy-MM-DD').format('yyyy-MM-DD')} ${moment(meeting.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meeting.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
+                },
+
+                "accessory": {
+                    // },
+                    "type": "overflow",
+                    "action_id": "select_meeting_option",
+                    "options": [
+                        {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Edit",
+                                "emoji": true
+                            },
+                            "value": `${meeting.id}`
+
+                        },
+                        {
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Delete",
+                                "emoji": true
+                            },
+                            "value": `${meeting.id}`
+
+                        }
+                    ]
+                },
+
+            }
+        }
+    }
+
+    noAbleTime() {
+        const block = [{
             "text": {
                 "type": "plain_text",
                 "text": '예약가능한 시간이 없습니다.',
@@ -43,7 +94,6 @@ class BlockManager {
         }]
         return block;
     }
-
 
 
     meetingRoom() {
@@ -86,7 +136,7 @@ class BlockManager {
     }
 
     workSection() {
-        const blocks= [
+        const blocks = [
             {
                 "type": "header",
                 "text": {
@@ -448,7 +498,6 @@ class BlockManager {
     }
 
 
-
     async updateModal(initData: any, timeList: any[], isEdit?: boolean) {
         let initMember = {}
         let initSelectedTime = {}
@@ -494,7 +543,7 @@ class BlockManager {
                 }
             }
         }
-        if(initData.start && initData.end && isEdit){
+        if (initData.start && initData.end && isEdit) {
             timeList.unshift({
                 "text": {
                     "type": "plain_text",
@@ -504,7 +553,7 @@ class BlockManager {
                 "value": `${initData.start}-${initData.end}`
             })
 
-            initSelectedTime={
+            initSelectedTime = {
                 "type": "static_select",
                 "placeholder": {
                     "type": "plain_text",
@@ -523,7 +572,8 @@ class BlockManager {
                 "action_id": "meeting_time"
             }
 
-        }else{
+        }
+        else {
             initSelectedTime =
                 {
                     "type": "static_select",
@@ -734,7 +784,8 @@ class BlockManager {
                     "emoji": true
                 }
             }
-        } else {
+        }
+        else {
             initMember = {
                 "type": "input",
                 dispatch_action: true,

@@ -1,13 +1,14 @@
 import Model from '../../../_base/model';
 import {DataTypes, Op, Sequelize, Transaction} from 'sequelize';
-import { dbs } from '../../../../commons/globals';
+import {dbs} from '../../../../commons/globals';
 import * as moment from "moment-timezone";
+import blockManager from "../../../../services/blockManager";
 
 class WorkLogModel extends Model {
     protected initialize(): void {
         this.name = 'workLog'
         this.attributes = {
-            user_id: {type:DataTypes.STRING, allowNull: false},
+            user_id: {type: DataTypes.STRING, allowNull: false},
             start: {
                 type: DataTypes.DATE,
             },
@@ -20,10 +21,78 @@ class WorkLogModel extends Model {
 
     async afterSync(): Promise<void> {
         this.model.belongsTo(dbs.User.model, {foreignKey: 'user_id', targetKey: 'user_id'})
-         }
+    }
+
+    async workStart(user: any, trigger_id: any, transaction?: Transaction) {
+
+        const user_id = user.id;
+
+        const userInfo = {
+            user_id,
+            user_name: user.username,
+        };
+
+        const workStart = {
+            user_id,
+            start: moment().toDate()
+        }
+        const isWorkStart = await this.hasWorkStart(user_id, transaction)
+
+        if (!isWorkStart) {
+            if (!dbs.User.findUser(user_id)) {
+                await dbs.User.create(userInfo, transaction)
+            }
+
+            await this.model.create(workStart, transaction)
+            await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
+        }
+        else {
+            await blockManager.openConfirmModal(trigger_id, '이미 출근처리되었습니다.');
+        }
+
+    }
+
+    async workEnd(user: any, trigger_id: any, transaction?: Transaction) {
+
+        const user_id = user.id;
+        const isWorkStart = await this.hasWorkStart(user_id)
+        const isWorkEnd = await this.hasWorkEnd(user_id)
 
 
-  async hasWorkStart(user_id:any, transaction?:Transaction){
+        if (isWorkEnd) {
+            await blockManager.openConfirmModal(trigger_id, '이미 퇴근하셨습니다.');
+        }
+        else if (isWorkStart) {
+            const workDone = await this.model.update({end: moment().toDate()}, {
+                user_id: user_id,
+                id: isWorkStart.id
+            }, transaction);
+
+            if (workDone[0] === 1) {
+                await blockManager.openConfirmModal(trigger_id, '퇴근 처리되었습니다. ');
+            }
+            else {
+                await blockManager.openConfirmModal(trigger_id, '퇴근 처리에 실패하였습니다.');
+            }
+        }
+        else {
+            await blockManager.openConfirmModal(trigger_id, '출근기록이 없습니다. 출근 버튼 먼저 눌러주세요');
+        }
+
+    }
+
+    async workHistory(user_id: string, historyDuration: string) {
+
+        return await this.model.findAll({
+            user_id,
+            start: {
+                [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
+            }
+        })
+
+    }
+
+    async hasWorkStart(user_id: any, transaction?: Transaction) {
         return await this.model.findOne({
             where: {
                 user_id,
@@ -34,13 +103,13 @@ class WorkLogModel extends Model {
                 }
             }
         })
-  }
+    }
 
-    async hasWorkEnd(user_id:any, transaction?:Transaction){
+    async hasWorkEnd(user_id: any, transaction?: Transaction) {
         return await this.model.findOne({
             where: {
                 user_id,
-                start:{
+                start: {
                     [Op.lte]: moment().toDate(),
                     [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
                 },
@@ -52,19 +121,6 @@ class WorkLogModel extends Model {
             }
         })
     }
-
-    // async workEnd(user_id:string,id:number){
-    //     return await this.model.update({
-    //         end:moment().toDate(),
-    //         where:{
-    //             user_id,
-    //             id
-    //
-    //         }
-    //     })
-    //
-    // }
-
 
 
 }

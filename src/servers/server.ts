@@ -27,8 +27,6 @@ import cfgOption from '../../config/opt';
 
 const {CORS} = cfgOption;
 
-//spreadsheet
-import * as google from 'googleapis';
 
 
 // graph-ql
