@@ -17,7 +17,7 @@ class UserModel extends Model {
 
     async findUser(user_id: string, transaction?:Transaction){
         return await this.model.findOne({
-            where:user_id
+            where: {user_id}
         })
     }
 

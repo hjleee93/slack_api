@@ -7,7 +7,8 @@ class ParticipantModel extends Model {
         this.name = 'participant'
         this.attributes = {
             user_id: {type: DataTypes.STRING, allowNull: false},
-            meeting_id: {type: DataTypes.INTEGER, allowNull: false}
+            meeting_id: {type: DataTypes.INTEGER, allowNull: false},
+            user_name:{type: DataTypes.STRING}
         }
     }
 

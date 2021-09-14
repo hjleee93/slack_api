@@ -36,15 +36,17 @@ class WorkLogModel extends Model {
             user_id,
             start: moment().toDate()
         }
+
         const isWorkStart = await this.hasWorkStart(user_id)
 
         if (!isWorkStart) {
-            if (!dbs.User.findUser(user_id)) {
+            if (!await dbs.User.findUser(user_id, transaction)) {
                 await dbs.User.create(userInfo, transaction)
             }
             await this.model.create(workStart, transaction)
             return false;
-        }else{
+
+        } else {
             return true;
         }
     }
@@ -80,7 +82,8 @@ class WorkLogModel extends Model {
 
     async workHistory(user_id: string, historyDuration: string) {
 
-        return await this.model.findAll({where: {
+        return await this.model.findAll({
+            where: {
                 user_id,
                 start: {
                     [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
@@ -109,12 +112,12 @@ class WorkLogModel extends Model {
                 user_id,
                 start: {
                     [Op.lte]: moment().toDate(),
-                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
+                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:00'),
                 },
                 end: {
                     //범위
                     [Op.lte]: moment().toDate(),
-                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:01'),
+                    [Op.gt]: moment().format('yyyy-MM-DDT00:00:00'),
                 }
             }
         })

@@ -44,14 +44,14 @@ class BlockManager {
     }
 
     meeting = {
-        list: (meeting: any, memberNameList: any) => {
-            return   {
+        list: (meetingInfo: any) => {
+            return {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `📢*${meeting.title}* \n\n 참석자 : ${_.map(memberNameList, (name: any) => {
-                        return ' ' + name
-                    })}\n\n \`\`\`${moment(meeting.date, 'yyyy-MM-DD').format('yyyy-MM-DD')} ${moment(meeting.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meeting.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
+                    "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
+                        return ' ' + user.user_name
+                    })}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('yyyy-MM-DD')} ${moment(meetingInfo.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
                 },
 
                 "accessory": {
@@ -65,7 +65,7 @@ class BlockManager {
                                 "text": "Edit",
                                 "emoji": true
                             },
-                            "value": `${meeting.id}`
+                            "value": `${meetingInfo.id}`
 
                         },
                         {
@@ -74,7 +74,7 @@ class BlockManager {
                                 "text": "Delete",
                                 "emoji": true
                             },
-                            "value": `${meeting.id}`
+                            "value": `${meetingInfo.id}`
                         }
                     ]
                 },
@@ -83,7 +83,7 @@ class BlockManager {
     }
 
     home = {
-        header: () =>{
+        header: () => {
             return {
                 "type": "header",
                 "text": {
@@ -93,7 +93,7 @@ class BlockManager {
                 }
             }
         },
-        workAlarm: (time?:Date) => {
+        workAlarm: (time?: Date) => {
             return {
                 "type": "section",
                 "text": {
@@ -152,7 +152,7 @@ class BlockManager {
                     "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('yyyy-MM-DD')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH시 mm분')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH시 mm분')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
-            },  this.divider()
+            }, this.divider()
         ]
         return blocks;
     }
@@ -307,12 +307,12 @@ class BlockManager {
     }
 
     async meetingModal() {
-        const currTime = moment().isBefore(moment(slackManager.businessTime,'HH:mm')) ? moment(slackManager.businessTime, 'HH:mm') : moment()
+        const currTime = moment().isBefore(moment(slackManager.businessTime, 'HH:mm')) ? moment(slackManager.businessTime, 'HH:mm') : moment()
         //시간 반올림
         const remainder = 15 - currTime.minute() % 15
 
         //현재 시간 이후로만 예약가능
-        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm:ss'), '19:00:00'],moment().toDate(), this.meetingRoom()[0].value)
+        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], moment().toDate(), this.meetingRoom()[0].value)
 
         const modal = {
             type: 'modal',
@@ -528,7 +528,9 @@ class BlockManager {
                         "emoji": true
                     },
                     "action_id": "participant_list",
-                    initial_users: initData.members
+                    initial_users: _.map(initData.members, (member:any)=>{
+                        return member.user_id
+                    })
                 },
                 "label": {
                     "type": "plain_text",
@@ -623,7 +625,7 @@ class BlockManager {
                                 "text": `${initData.room_number}`,
                                 "emoji": true
                             },
-                            "value":`${initData.room_number}`
+                            "value": `${initData.room_number}`
                         },
                         "action_id": "room_number"
                     },
@@ -678,7 +680,7 @@ class BlockManager {
                     dispatch_action: true,
                     "element": {
                         "type": "datepicker",
-                        "initial_date": moment(initData.date).format('yyyy-MM-DD') ,
+                        "initial_date": moment(initData.date).format('yyyy-MM-DD'),
                         "action_id": "selected_date"
                     },
                     "label": {
@@ -1071,8 +1073,7 @@ class BlockManager {
             trigger_id: trigger_id,
             view: JSON.stringify(blocks)
         };
-
-       console.log( await axios.post('https://slack.com/api/views.open', qs.stringify(args)))
+        await axios.post('https://slack.com/api/views.open', qs.stringify(args))
 
     };
 

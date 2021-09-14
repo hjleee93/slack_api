@@ -34,42 +34,36 @@ class MeetingModel extends Model {
     }
 
     async hasMeetingOnDate(date: Date, room_number: string) {
-        const result = await this.model.findAll({where: {date: new Date(moment(date).format('yyyy-MM-DD')), room_number: room_number}});
+        const result = await this.model.findAll({
+            where: {
+                date: new Date(moment(date).format('yyyy-MM-DD')),
+                room_number: room_number
+            }
+        });
         return result;
     }
 
-    async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string, transaction?: Transaction) {
+    async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string,meeting_id?: number, transaction?: Transaction) {
 
         const result = await this.model.findAll({
             where:
                 {
                     start: {[Op.gte]: start, [Op.lt]: end},
                     room_number,
-                    date: date
+                    date,
+                    id:{
+                        [Op.not] : meeting_id
+                    }
                 }
         }, transaction);
         return result;
     }
 
-    async deleteMeeting(meeting_id: string) {
-        const result = await this.model.destroy({where: {id: meeting_id}});
+    async deleteMeeting(meeting_id: string, transaction?: Transaction) {
+        const result = await this.model.destroy({where: {id: meeting_id}, transaction});
         return result;
     }
 
-    createMeetingForm(data: any, user: any) {
-        const createMeeting = {
-            user_id: user.id,
-            room_number: data.room_number,
-            title: data.title,
-            description: data.description,
-            date: data.date,
-            start: data.start,
-            end: data.end,
-            members: data.members
-        }
-
-        return createMeeting
-    }
 
     async createMeeting(data: any, user: any, transaction?: Transaction) {
 
@@ -77,121 +71,93 @@ class MeetingModel extends Model {
             throw new Error('시간을 선택해주세요')
         }
         else {
-
-            const participantList: any = [];
-            const participantArr = this.createMeetingForm(data, user).members;
-
-            const meetingForm = this.createMeetingForm(data, user);
-
-            const hasMeeting = await this.hasMeetingAtTime(new Date(meetingForm.date), meetingForm.room_number, meetingForm.start, meetingForm.end);
+            const meetingInfo = slackManager.createMeetingForm({data: data, user: user});
+            const members = meetingInfo.members;
+            const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, undefined, transaction);
 
             if (hasMeeting && hasMeeting.length === 0) {
 
-                const meeting = await this.model.create(meetingForm, transaction);
+                const meeting = await this.model.create(meetingInfo, transaction);
 
-                for (let i = 0; i < participantArr.length; i++) {
-
+                for (let i = 0; i < members.length; i++) {
+                    const userInfo = await slackManager.getUserInfo(members[i]);
                     let obj = {
-                        user_id: participantArr[i],
-                        meeting_id: meeting.id
-                        // name:view.username
+                        user_id: members[i],
+                        meeting_id: meeting.id,
+                        user_name: userInfo.data.user.real_name
                     }
-                    participantList.push(obj)
+                    members[i] = obj
                 }
-                await dbs.Participant.bulkCreate(participantList, transaction);
 
-                await slackManager.sendDm(participantArr, user, meetingForm);
+                await dbs.Participant.bulkCreate(members, transaction)
 
-            }
-            else {
+                await slackManager.sendDm({members, meetingInfo})
+                console.log(members)
+
+            } else {
                 throw new Error('이미 등록된 예약이 있습니다.')
             }
         }
 
     }
 
-    meetingList = async (user: any, trigger_id: any, clickedType?: string) => {
+    meetingList = async () => {
         const meetingList = await this.model.findAll({
             where: {
                 date: {
                     [Op.gte]: new Date(moment().format('yyyy-MM-DD')),
                 }
-            }
+            },
+            order: [['date'], ['start']],
+            include: [{
+                model: dbs.Participant.model,
+
+            }]
         })
 
-        //@ts-ignore
-        const list = meetingList.sort((a: any, b: any) => new Date(a.date) - new Date(b.date));
-        //@ts-ignore
-        // const list = dateSorted.sort((a: any, b: any) =>
-        //      b.start.localeCompare(a.start)
-        //     // console.log(a.start, new Date(a.start) - new Date(b.start)
-        //     );
+        const result = _.map(meetingList, (list: any) => {
+            return blockManager.meeting.list(list);
+        })
 
-
-        // const member = await dbs.Participants.findUser()
-        const result = await Promise.all(_.map(list, async (meeting: any) => {
-            const membersObj = await dbs.Participant.findAllUser(meeting.id)
-
-            const memberNameList = await Promise.all(_.map(membersObj, async (member: any) => {
-                const memberInfo = await slackManager.getUserInfo(member.user_id)
-
-                return memberInfo.data.user.real_name;
-            }))
-
-
-            if (!meeting.deleted_at) {
-                return blockManager.meeting.list(meeting, memberNameList);
-            }
-            else {
-                return null;
-            }
-        }));
-
-
-        return result.filter((element, i) => element !== null);
+        return result
     }
 
 
     editMeeting = async (data: any, meeting_id: number, user: any, transaction?: Transaction) => {
 
-        const meetingForm = this.createMeetingForm(data, user);
+        const meetingInfo = slackManager.createMeetingForm({data, user});
 
-        const hasMeeting = await this.hasMeetingAtTime(new Date(meetingForm.date), meetingForm.room_number, meetingForm.start, meetingForm.end);
-
-
-        _.forEach(hasMeeting, (meeting: any, idx: number) => {
-            if (meeting.id == meeting_id) {
-                hasMeeting.splice(idx, 1)
-            }
-        })
+        const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, meeting_id, transaction);
 
         if (hasMeeting && hasMeeting.length === 0) {
 
-            const participantList: any = [];
-            const participantArr = data.members;
+            const members = data.members;
 
-            for (let i = 0; i < participantArr.length; i++) {
-
+            for (let i = 0; i < members.length; i++) {
+                const userInfo = await slackManager.getUserInfo(members[i].user_id || members[i]);
                 let obj = {
-                    user_id: participantArr[i],
-                    meeting_id: meeting_id
+                    user_id: members[i].user_id || members[i],
+                    meeting_id,
+                    user_name: userInfo.data.user.real_name
                 }
-                participantList.push(obj)
+                members[i] = obj
             }
 
             try {
-                await this.model.update(meetingForm, {where: {id: meeting_id}}, transaction);
-                await dbs.Participant.destroy({meeting_id: meeting_id}, transaction);
-                await dbs.Participant.bulkCreate(participantList, transaction);
-                await slackManager.sendDm(participantArr, user, meetingForm);
-                return true;
-            } catch (e) {
+                await this.model.update(meetingInfo, {where: {id: meeting_id}}, transaction);
+
+                await dbs.Participant.destroy({meeting_id}, transaction);
+                console.log(members)
+                await dbs.Participant.bulkCreate(members, transaction);
+
+                await slackManager.sendDm({members, meetingInfo});
+            }
+            catch (e) {
+                console.log(e.message)
                 throw new Error(e.message)
             }
 
-        }
-        else {
-
+        } else {
             throw new Error('이미 등록된 예약이 있습니다.')
         }
 

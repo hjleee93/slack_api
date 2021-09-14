@@ -24,11 +24,14 @@ class TempSaver {
         return this.obj;
     }
 
-    async createEditDate(data: any, user_id: string) {
+    async createEditData(data: any, user_id: string) {
         const memberList = await dbs.Participant.findAllUser(data.id)
 
         const members = _.map(memberList, (list: any) => {
-            return list.user_id
+            return {
+                user_id: list.user_id,
+                user_name: list.user_name
+            }
         })
 
         this.obj[user_id] =
@@ -56,7 +59,6 @@ class TempSaver {
 
     updateDate(user_id: any, date: any) {
         this.obj[user_id].date = date
-
         return this.obj[user_id]
 
     }
@@ -67,7 +69,6 @@ class TempSaver {
 
     updateRoom(user_id: any, room_number: string) {
         this.obj[user_id].room_number = room_number;
-
         return this.obj[user_id];
     }
 
