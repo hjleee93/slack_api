@@ -9,74 +9,84 @@ class TimeManager {
 
         let closeTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
         let startTime = moment(businessTime[0], 'HH:mm');
-        let timeList: any[] = [businessTime[0]];
-        let result: any[] = [];
+        let timeList: any[] = [];
+
 
         // if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD')) {
 
         //15분 기준으로 예약 가능 closeTime
-        while (startTime < closeTime) {
-            timeList.push(startTime.add(15, 'm').format('HH:mm'))
-        }
-
-        result = _.map(timeList, (time: any) => {
-            let endTime = moment(time, 'HH:mm').add(duration, 'm');
-
-            // if (endTime <= startTime){
-            return {
+        while (startTime <= closeTime) {
+            let endTime = moment(startTime, 'HH:mm:ss').add(duration, 'm');
+            timeList.push({
                 "text": {
                     "type": "plain_text",
-                    "text": `${time} - ${endTime.format('HH:mm')}`,
+                    "text": `${startTime.format('HH:mm')} - ${endTime.format('HH:mm')}`,
                     "emoji": true
                 },
-                "value": `${time}-${endTime.format('HH:mm')}`
-            }
+                "value": `${startTime.format('HH:mm')}-${endTime.format('HH:mm')}`
+            })
+            startTime.add(15, 'm').format('HH:mm:ss')
 
+        }
 
-        })
+        const checkTime = await this.checkDupTime(timeList, room_number, new Date(date))
 
-        const checkTime = await this.checkDupTime(result, room_number, new Date(date))
-
-        return result[0] ? checkTime : blockManager.noAbleTime()
+        return checkTime.length > 0 ? checkTime : blockManager.noAbleTime();
 
     }
 
     async checkDupTime(originList: any[], room_number: string, selectedDate: Date) {
+        console.log(originList)
 
-        const result = await dbs.Meeting.hasMeetingOnDate(selectedDate, room_number)
+        const meetingList = await dbs.Meeting.hasMeetingOnDate(selectedDate, room_number)
+
+        const sortedMeetingList = meetingList.sort((a: any, b: any) =>
+            a.start.localeCompare(b.start)
+        );
 
         let startIdx: number | undefined;
         let endIdx: number | undefined;
 
-        _.some(result, (meeting: any) => {
-            _.some(originList, (list: any, i: number) => {
+        _.forEach(sortedMeetingList, (meeting: any) => {
+            _.forEach(originList, (list: any, i: number) => {
 
-                if (list.value.split('-')[0] === meeting.start) {
-                    if (!startIdx) {
-                        startIdx = i;
-                    }
-                }
-                if (list.value.split('-')[1] === meeting.start) {
-                    if (!startIdx) {
-                        startIdx = i + 1;
-                    }
-                }
-                if (list.value.split('-')[0] === meeting.end) {
+                if (list.value.split('-')[0] === moment(meeting.end, 'HH:mm').format('HH:mm')) {
                     endIdx = i;
-                    // return true;
+
                 }
-                if (list.value.split('-')[1] === meeting.end) {
+                // if (list.value.split('-')[1] === moment(meeting.start, 'HH:mm').format('HH:mm')) {
+                //     if (!startIdx) {
+                //         startIdx = i + 1;
+                //     }
+                // }
+                // if (list.value.split('-')[0] === moment(meeting.end, 'HH:mm').format('HH:mm')) {
+                //     endIdx = i;
+                //     // return true;
+                // }
+               else if (list.value.split('-')[1] === moment(meeting.start, 'HH:mm').format('HH:mm')) {
+
+                        startIdx = i;
+
+                }
+                else if(moment(meeting.start, 'HH:mm').format('HH:mm') === '10:00'){
+                    startIdx = 0;
+                }
+                else if(moment(meeting.end, 'HH:mm').format('HH:mm') === '17:00'){
                     endIdx = originList.length;
-                    // return true;
                 }
+                else if(!startIdx) {
+                    startIdx = 0;
+                }
+
             })
 
             if ((startIdx || startIdx === 0) && endIdx) {
                 originList.splice(startIdx, endIdx - startIdx);
 
-            }else if(!startIdx && endIdx ){
-                originList.splice(0, endIdx);
             }
+            // else if (!startIdx && endIdx) {
+            //     originList.splice(0, endIdx);
+            // }
             startIdx = undefined;
             endIdx = undefined;
         })

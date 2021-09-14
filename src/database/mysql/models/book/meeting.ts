@@ -34,7 +34,7 @@ class MeetingModel extends Model {
     }
 
     async hasMeetingOnDate(date: Date, room_number: string) {
-        const result = await this.model.findAll({where: {date: date, room_number: room_number}});
+        const result = await this.model.findAll({where: {date: new Date(moment(date).format('yyyy-MM-DD')), room_number: room_number}});
         return result;
     }
 
@@ -111,18 +111,21 @@ class MeetingModel extends Model {
     }
 
     meetingList = async (user: any, trigger_id: any, clickedType?: string) => {
-
         const meetingList = await this.model.findAll({
             where: {
                 date: {
-                    [Op.gte]: moment().toDate(),
+                    [Op.gte]: new Date(moment().format('yyyy-MM-DD')),
                 }
             }
         })
 
         //@ts-ignore
-        const dateSorted = meetingList.sort((a: any, b: any) => new Date(a.date) - new Date(b.date));
-        const list = dateSorted.sort((a: any, b: any) => a.start - b.start);
+        const list = meetingList.sort((a: any, b: any) => new Date(a.date) - new Date(b.date));
+        //@ts-ignore
+        // const list = dateSorted.sort((a: any, b: any) =>
+        //      b.start.localeCompare(a.start)
+        //     // console.log(a.start, new Date(a.start) - new Date(b.start)
+        //     );
 
 
         // const member = await dbs.Participants.findUser()

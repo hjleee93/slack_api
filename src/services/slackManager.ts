@@ -10,7 +10,7 @@ import * as _ from "lodash";
 
 
 class SlackManager {
-    public businessTime = ['10:00', '19:00']
+    public businessTime = ['10:00:00', '19:00:00']
     private isEdit: boolean = false;
     private meetingId: number = 0;
 
@@ -329,7 +329,7 @@ class SlackManager {
         //오늘 날짜 선택한 경우
         const remainder = 15 - moment().minute() % 15
         if (form.date === moment().format('yyyy-MM-DD')) {
-            result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm'), '19:00'], form.date, form.room_number)
+            result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], form.date, form.room_number)
         }
         else {
             result = await timeManager.timeList(form.duration, this.businessTime, form.date, form.room_number);

@@ -312,7 +312,7 @@ class BlockManager {
         const remainder = 15 - currTime.minute() % 15
 
         //현재 시간 이후로만 예약가능
-        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm'), '19:00'], moment().format('yyyy-MM-DD'), this.meetingRoom()[0].value)
+        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm:ss'), '19:00:00'],moment().toDate(), this.meetingRoom()[0].value)
 
         const modal = {
             type: 'modal',
@@ -563,7 +563,7 @@ class BlockManager {
                     "text": `${moment(initData.start, 'HH:mm').format('HH:mm')} - ${moment(initData.end, 'HH:mm').format('HH:mm')}`,
                     "emoji": true
                 },
-                "value": `${moment(initData.start, 'HH:mm').format('HH:mm')}-${moment(initData.end, 'HH:mm').format('HH:mm')}`
+                "value": `${moment(initData.start, 'HH:mm:ss').format('HH:mm')}-${moment(initData.end, 'HH:mm:ss').format('HH:mm')}`
             })
 
             initSelectedTime = {
@@ -580,7 +580,7 @@ class BlockManager {
                         "text": `${moment(initData.start, 'HH:mm').format('HH:mm')} - ${moment(initData.end, 'HH:mm').format('HH:mm')}`,
                         "emoji": true
                     },
-                    "value": `${moment(initData.start, 'HH:mm').format('HH:mm')}-${moment(initData.end, 'HH:mm').format('HH:mm')}`
+                    "value": `${moment(initData.start, 'HH:mm:ss').format('HH:mm')}-${moment(initData.end, 'HH:mm:ss').format('HH:mm')}`
                 },
                 "action_id": "meeting_time"
             }
