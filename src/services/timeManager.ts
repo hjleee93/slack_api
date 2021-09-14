@@ -12,8 +12,6 @@ class TimeManager {
         let timeList: any[] = [];
 
 
-        // if(tempTime <  moment('19:00', 'HH:mm') && date !== moment().format('yyyy-DD')) {
-
         //15분 기준으로 예약 가능 closeTime
         while (startTime <= closeTime) {
             let endTime = moment(startTime, 'HH:mm:ss').add(duration, 'm');
@@ -36,7 +34,6 @@ class TimeManager {
     }
 
     async checkDupTime(originList: any[], room_number: string, selectedDate: Date) {
-        console.log(originList)
 
         const meetingList = await dbs.Meeting.hasMeetingOnDate(selectedDate, room_number)
 
@@ -52,29 +49,17 @@ class TimeManager {
 
                 if (list.value.split('-')[0] === moment(meeting.end, 'HH:mm').format('HH:mm')) {
                     endIdx = i;
-
                 }
-                // if (list.value.split('-')[1] === moment(meeting.start, 'HH:mm').format('HH:mm')) {
-                //     if (!startIdx) {
-                //         startIdx = i + 1;
-                //     }
-                // }
-                // if (list.value.split('-')[0] === moment(meeting.end, 'HH:mm').format('HH:mm')) {
-                //     endIdx = i;
-                //     // return true;
-                // }
-               else if (list.value.split('-')[1] === moment(meeting.start, 'HH:mm').format('HH:mm')) {
-
-                        startIdx = i;
-
+                else if (list.value.split('-')[1] === moment(meeting.start, 'HH:mm').format('HH:mm')) {
+                    startIdx = i;
                 }
-                else if(moment(meeting.start, 'HH:mm').format('HH:mm') === '10:00'){
+                else if (moment(meeting.start, 'HH:mm').format('HH:mm') === '10:00') {
                     startIdx = 0;
                 }
-                else if(moment(meeting.end, 'HH:mm').format('HH:mm') === '17:00'){
+                else if (moment(meeting.end, 'HH:mm').format('HH:mm') === '17:00') {
                     endIdx = originList.length;
                 }
-                else if(!startIdx) {
+                else if (!startIdx) {
                     startIdx = 0;
                 }
 
@@ -82,11 +67,8 @@ class TimeManager {
 
             if ((startIdx || startIdx === 0) && endIdx) {
                 originList.splice(startIdx, endIdx - startIdx);
-
             }
-            // else if (!startIdx && endIdx) {
-            //     originList.splice(0, endIdx);
-            // }
+
             startIdx = undefined;
             endIdx = undefined;
         })

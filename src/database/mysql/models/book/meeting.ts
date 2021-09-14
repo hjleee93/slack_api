@@ -5,6 +5,8 @@ import {dbs} from '../../../../commons/globals';
 import slackManager from "../../../../services/slackManager";
 import * as _ from "lodash";
 import blockManager from "../../../../services/blockManager";
+import slackApi from "../../../../services/slackApi";
+import {divide} from "lodash";
 
 class MeetingModel extends Model {
     protected initialize(): void {
@@ -43,7 +45,7 @@ class MeetingModel extends Model {
         return result;
     }
 
-    async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string,meeting_id?: number, transaction?: Transaction) {
+    async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string, meeting_id?: number, transaction?: Transaction) {
 
         const result = await this.model.findAll({
             where:
@@ -51,16 +53,18 @@ class MeetingModel extends Model {
                     start: {[Op.gte]: start, [Op.lt]: end},
                     room_number,
                     date,
-                    id:{
-                        [Op.not] : meeting_id
+                    id: {
+                        [Op.not]: meeting_id
                     }
                 }
         }, transaction);
         return result;
     }
 
-    async deleteMeeting(meeting_id: string, transaction?: Transaction) {
-        const result = await this.model.destroy({where: {id: meeting_id}, transaction});
+    async deleteMeeting(meeting_id: string, user: any, transaction?: Transaction) {
+
+
+        const result = await this.model.destroy({where: {id: meeting_id, user_id: user.id}, transaction});
         return result;
     }
 
@@ -71,7 +75,7 @@ class MeetingModel extends Model {
             throw new Error('시간을 선택해주세요')
         }
         else {
-            const meetingInfo = slackManager.createMeetingForm({data: data, user: user});
+            const meetingInfo = this.createMeetingForm({data: data, user: user});
             const members = meetingInfo.members;
             const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, undefined, transaction);
 
@@ -80,7 +84,7 @@ class MeetingModel extends Model {
                 const meeting = await this.model.create(meetingInfo, transaction);
 
                 for (let i = 0; i < members.length; i++) {
-                    const userInfo = await slackManager.getUserInfo(members[i]);
+                    const userInfo = await slackApi.getUserInfo(members[i]);
                     let obj = {
                         user_id: members[i],
                         meeting_id: meeting.id,
@@ -90,18 +94,23 @@ class MeetingModel extends Model {
                 }
 
                 await dbs.Participant.bulkCreate(members, transaction)
+                const msgInfo = await slackApi.sendDm({members, meetingInfo, text:'회의가 예약되었습니다. 확인해주세요'})
+                const result = await dbs.Message.createMsg(msgInfo, meeting.id)
 
-                await slackManager.sendDm({members, meetingInfo})
-                console.log(members)
 
-            } else {
+
+
+
+            }
+            else {
                 throw new Error('이미 등록된 예약이 있습니다.')
             }
         }
 
     }
 
-    meetingList = async () => {
+    meetingList = async (user: { id: string, username: string, name: string, team_id: string }) => {
+
         const meetingList = await this.model.findAll({
             where: {
                 date: {
@@ -116,16 +125,15 @@ class MeetingModel extends Model {
         })
 
         const result = _.map(meetingList, (list: any) => {
-            return blockManager.meeting.list(list);
+            return blockManager.meetingList(list, user)
         })
-
         return result
     }
 
 
     editMeeting = async (data: any, meeting_id: number, user: any, transaction?: Transaction) => {
 
-        const meetingInfo = slackManager.createMeetingForm({data, user});
+        const meetingInfo = this.createMeetingForm({data, user});
 
         const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, meeting_id, transaction);
 
@@ -134,7 +142,7 @@ class MeetingModel extends Model {
             const members = data.members;
 
             for (let i = 0; i < members.length; i++) {
-                const userInfo = await slackManager.getUserInfo(members[i].user_id || members[i]);
+                const userInfo = await slackApi.getUserInfo(members[i].user_id || members[i]);
                 let obj = {
                     user_id: members[i].user_id || members[i],
                     meeting_id,
@@ -147,21 +155,36 @@ class MeetingModel extends Model {
                 await this.model.update(meetingInfo, {where: {id: meeting_id}}, transaction);
 
                 await dbs.Participant.destroy({meeting_id}, transaction);
-                console.log(members)
                 await dbs.Participant.bulkCreate(members, transaction);
 
-                await slackManager.sendDm({members, meetingInfo});
-            }
-            catch (e) {
-                console.log(e.message)
+              const result = await dbs.Message.getMsgInfo(meeting_id)
+                await slackApi.deleteDm({channel:result.channel_id, ts:result.message_id})
+              // await slackApi.updateDm({channel:result.channel_id, ts:result.message_id, meetingInfo})
+                await slackApi.sendDm({members, meetingInfo, text:'회의가 수정되었습니다. 확인해주세요 '});
+            } catch (e: any) {
                 throw new Error(e.message)
             }
-
-        } else {
+        }
+        else {
             throw new Error('이미 등록된 예약이 있습니다.')
         }
 
 
+    }
+
+    createMeetingForm({data, user}: any) {
+        const createMeeting = {
+            user_id: user.id,
+            room_number: data.room_number,
+            title: data.title,
+            description: data.description,
+            date: data.date,
+            start: data.start,
+            end: data.end,
+            members: data.members
+        }
+
+        return createMeeting
     }
 }
 

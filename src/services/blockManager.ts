@@ -1,11 +1,9 @@
 import * as moment from "moment-timezone";
-
+import 'moment/locale/ko';
 import * as _ from "lodash";
-import slackConfig from "../../config/slack";
-import axios from "axios";
-import * as qs from "qs";
 import timeManager from "./timeManager";
 import slackManager from "./slackManager";
+import slackApi from "./slackApi";
 
 class BlockManager {
     public meetingRoomArr = ['302', '402'];
@@ -43,26 +41,18 @@ class BlockManager {
 
     }
 
-    meeting = {
-        list: (meetingInfo: any) => {
-            return {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
-                        return ' ' + user.user_name
-                    })}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('yyyy-MM-DD')} ${moment(meetingInfo.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
-                },
-
+    meetingList(meetingInfo: any, user: { id: string, username: string, name: string, team_id: string }) {
+        let optionList!: any;
+        if (user.id === meetingInfo.user_id) {
+            optionList = {
                 "accessory": {
-                    // },
                     "type": "overflow",
                     "action_id": "select_meeting_option",
                     "options": [
                         {
                             "text": {
                                 "type": "plain_text",
-                                "text": "Edit",
+                                "text": "Edit Meeting",
                                 "emoji": true
                             },
                             "value": `${meetingInfo.id}`
@@ -71,16 +61,27 @@ class BlockManager {
                         {
                             "text": {
                                 "type": "plain_text",
-                                "text": "Delete",
+                                "text": "Cancel Meeting",
                                 "emoji": true
                             },
                             "value": `${meetingInfo.id}`
                         }
                     ]
-                },
+                }
             }
         }
+        return {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
+                    return ` <@${user.user_id}>`
+                })}\n\n 회의실 : ${meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
+            },
+            ...optionList
+        }
     }
+
 
     home = {
         header: () => {
@@ -149,7 +150,53 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('yyyy-MM-DD')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH시 mm분')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH시 mm분')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                }
+
+            }, this.divider()
+        ]
+        return blocks;
+    }
+
+    deleteDmJson(meetingInfo: any) {
+
+        const blocks = [
+
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "해당 회의는 취소되었습니다. "
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                }
+
+            }, this.divider()
+        ]
+        return blocks;
+    }
+
+    editDmJson(meetingInfo: any) {
+
+        const blocks = [
+
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "회의가 수정되었습니다. 확인해주세요"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()
@@ -512,7 +559,7 @@ class BlockManager {
     }
 
 
-    async updateModal(initData: any, timeList: any[], isEdit?: boolean) {
+    async updateModal({initData, timeList, isEdit}: any) {
         let initMember = {}
         let initSelectedTime = {}
 
@@ -528,8 +575,8 @@ class BlockManager {
                         "emoji": true
                     },
                     "action_id": "participant_list",
-                    initial_users: _.map(initData.members, (member:any)=>{
-                        return member.user_id
+                    initial_users: _.map(initData.members, (member: any) => {
+                        return member.user_id || member
                     })
                 },
                 "label": {
@@ -538,7 +585,8 @@ class BlockManager {
                     "emoji": true
                 }
             }
-        } else {
+        }
+        else {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -587,7 +635,8 @@ class BlockManager {
                 "action_id": "meeting_time"
             }
 
-        } else {
+        }
+        else {
             initSelectedTime =
                 {
                     "type": "static_select",
@@ -798,7 +847,8 @@ class BlockManager {
                     "emoji": true
                 }
             }
-        } else {
+        }
+        else {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -1040,8 +1090,7 @@ class BlockManager {
 
     //일반 확인 모달
     openConfirmModal = async (trigger_id: any, text: string) => {
-
-        const blocks =
+        const modal =
             {
                 "type": "modal",
                 "title": {
@@ -1068,14 +1117,24 @@ class BlockManager {
             }
 
 
-        const args = {
-            token: slackConfig.token,
-            trigger_id: trigger_id,
-            view: JSON.stringify(blocks)
-        };
-        await axios.post('https://slack.com/api/views.open', qs.stringify(args))
-
+        await slackApi.openModal(modal, trigger_id)
     };
+
+    async timeList(form: any) {
+        let result !: any
+        //오늘 날짜 선택한 경우
+        const remainder = 15 - moment().minute() % 15
+        if (form.date === moment().format('yyyy-MM-DD')) {
+            result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], form.date, form.room_number)
+        }
+        else if (moment(form.date).isBefore(moment())) {
+            result = this.noAbleTime()
+        }
+        else {
+            result = await timeManager.timeList(form.duration, slackManager.businessTime, form.date, form.room_number);
+        }
+        return result;
+    }
 
 }
 
