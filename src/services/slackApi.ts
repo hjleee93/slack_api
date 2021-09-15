@@ -23,14 +23,14 @@ class SlackApi {
         return await axios.post('https://slack.com/api/views.publish', qs.stringify(args));
     }
 
-    sendDm = async ({members, meetingInfo, text}: any) => {
+    sendDm = async ({members, meetingInfo, text, type}: any) => {
 
         for (let i = 0; i < members.length; i++) {
 
             const args = {
                 token: slackConfig.token,
                 channel: members[i].user_id,
-                blocks: JSON.stringify(blockManager.dmJson(meetingInfo)),
+                blocks: JSON.stringify(type === 'delete' ?blockManager.deleteDmJson(meetingInfo) : blockManager.dmJson(meetingInfo)),
                 text
             };
 

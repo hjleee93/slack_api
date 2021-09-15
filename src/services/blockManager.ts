@@ -76,7 +76,7 @@ class BlockManager {
                 "type": "mrkdwn",
                 "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
                     return ` <@${user.user_id}>`
-                })}\n\n 회의실 : ${meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
+                })}\n\n 회의실 : ${meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
             },
             ...optionList
         }
@@ -150,7 +150,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()
@@ -173,7 +173,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()
@@ -196,7 +196,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd a')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()

@@ -25,7 +25,8 @@ class TempSaver {
     }
 
     getTempForm(user_id: any){
-        return this.obj[user_id];
+        const result = this.obj[user_id]
+        return result;
     }
 
     async createEditData(data: any, user_id: string) {

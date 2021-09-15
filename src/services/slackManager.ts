@@ -60,8 +60,7 @@ class SlackManager {
                     })
 
 
-            }
-            else {
+            } else {
                 dbs.Meeting.createMeeting(tempSaver.meetingForm(user.id), user)
                     .then(() => {
                         blockManager.openConfirmModal(trigger_id, "예약이 완료되었습니다.")
@@ -82,8 +81,7 @@ class SlackManager {
 
             await slackApi.displayHome(user.id, list_block)
             this.initLocalData(user.id);
-        }
-        else if (type === "view_closed") {
+        } else if (type === "view_closed") {
             this.initLocalData(user.id);
         }
 
@@ -95,8 +93,7 @@ class SlackManager {
             if (!workLog) {
                 await blockManager.openConfirmModal(trigger_id, '출근 처리되었습니다.');
                 startTime = await dbs.WorkLog.hasWorkStart(user.id)
-            }
-            else {
+            } else {
                 await blockManager.openConfirmModal(trigger_id, '이미 출근처리되었습니다.');
             }
 
@@ -109,12 +106,10 @@ class SlackManager {
             ]
             await slackApi.displayHome(user.id, blocks)
 
-        }
-        else if (actions && actions[0].action_id.match(/work_end/)) {
+        } else if (actions && actions[0].action_id.match(/work_end/)) {
             await dbs.WorkLog.workEnd(user, trigger_id)
 
-        }
-        else if (actions && actions[0].action_id.match(/work_history/)) {
+        } else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
             const workHistory = await dbs.WorkLog.workHistory(user.id, historyDuration);
 
@@ -139,8 +134,7 @@ class SlackManager {
             await slackApi.displayHome(user.id, history_block)
 
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_booking/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
             tempSaver.createData(user.id);
             const modal = await blockManager.meetingModal()
             await slackApi.openModal(modal, trigger_id)
@@ -153,8 +147,7 @@ class SlackManager {
             // })
 
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_list/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_list/)) {
 
             const meetingList = await dbs.Meeting.meetingList(user)
 
@@ -168,8 +161,7 @@ class SlackManager {
             ]
             await slackApi.displayHome(user.id, list_block);
 
-        }
-        else if (actions && actions[0].action_id.match(/room_number/)) {
+        } else if (actions && actions[0].action_id.match(/room_number/)) {
 
             const form: any = tempSaver.updateRoom(user.id, actions[0].selected_option.value);
             const timeList: any = await blockManager.timeList(form)
@@ -177,15 +169,12 @@ class SlackManager {
 
             await slackApi.updateModal(modal, container.view_id)
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_title/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_title/)) {
             tempSaver.updateTitle(user.id, actions[0].value)
 
-        }
-        else if (actions && actions[0].action_id.match(/description/)) {
+        } else if (actions && actions[0].action_id.match(/description/)) {
             tempSaver.updateDesc(user.id, actions[0].value)
-        }
-        else if (actions && actions[0].action_id.match(/selected_date/)) {
+        } else if (actions && actions[0].action_id.match(/selected_date/)) {
 
             const form = tempSaver.updateDate(user.id, actions[0].selected_date);
 
@@ -195,8 +184,7 @@ class SlackManager {
 
             await slackApi.updateModal(modal, container.view_id)
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_duration/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_duration/)) {
             const duration = actions[0].selected_option.value
             const form: any = tempSaver.updateDuration(user.id, duration)
 
@@ -208,16 +196,14 @@ class SlackManager {
             await slackApi.updateModal(modal, container.view_id)
 
 
-        }
-        else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
+        } else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
 
             const meeting_id = actions[0].selected_option.value
-
+            const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
+            const form: any = (await tempSaver.createEditData(meetingInfo, user.id))[user.id];
             if (actions[0].selected_option.text.text.toLowerCase() === 'Edit Meeting'.toLowerCase()) {
                 this.isEdit = true
                 this.meetingId = meeting_id;
-                const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
-                const form: any = (await tempSaver.createEditData(meetingInfo, user.id))[user.id];
 
                 const timeList: any = await blockManager.timeList(form);
                 const modal = await blockManager.updateModal({initData: form, timeList, isEdit: this.isEdit})
@@ -225,20 +211,25 @@ class SlackManager {
 
                 await slackApi.openModal(modal, trigger_id);
 
-            }
-            else if (actions[0].selected_option.text.text.toLowerCase() === 'Cancel Meeting'.toLowerCase()) {
+            } else if (actions[0].selected_option.text.text.toLowerCase() === 'Cancel Meeting'.toLowerCase()) {
 
                 const deleteMeeting = await dbs.Meeting.deleteMeeting(meeting_id, user)
                 if (deleteMeeting === 1) {
 
-                    const members =await dbs.Participant.findAllUser(meeting_id)
+                    const members = await dbs.Participant.findAllUser(meeting_id)
 
 
                     await blockManager.openConfirmModal(trigger_id, '해당 예약은 삭제되었습니다.');
                     const result = await dbs.Message.getMsgInfo(meeting_id)
+
                     await slackApi.deleteDm({channel: result.channel_id, ts: result.message_id})
-                //삭제 디엠 보내기
-                    await slackApi.sendDm({members, meetingInfo: tempSaver.getTempForm(user.id), text: '해당 회의는 취소되었습니다.'});
+                    //삭제 디엠 보내기
+                    await slackApi.sendDm({
+                        members,
+                        meetingInfo: form,
+                        type: 'delete',
+                        text: '회의가 취소되었습니다. 알림을 확인해주세요'
+                    });
                 }
 
                 const meetingList = await dbs.Meeting.meetingList(user)
@@ -258,8 +249,7 @@ class SlackManager {
 
             }
 
-        }
-        else if (actions && actions[0].action_id.match(/meeting_time/)) {
+        } else if (actions && actions[0].action_id.match(/meeting_time/)) {
 
             if (actions[0].selected_option.value === 'null') {
                 const form = tempSaver.updateDate(user.id, moment().add(1, 'day').format('yyyy-MM-DD'))
@@ -267,14 +257,12 @@ class SlackManager {
                 const modal = await blockManager.updateModal({initData: form, timeList, isEdit: this.isEdit})
 
                 await slackApi.updateModal(modal, container.view_id)
-            }
-            else {
+            } else {
                 tempSaver.updateTime(user.id, actions[0].selected_option.value)
             }
 
 
-        }
-        else if (actions && actions[0].action_id.match(/participant_list/)) {
+        } else if (actions && actions[0].action_id.match(/participant_list/)) {
             tempSaver.updateMembers(user.id, actions[0].selected_users)
         }
 
