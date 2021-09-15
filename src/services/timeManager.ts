@@ -11,10 +11,10 @@ class TimeManager {
         let startTime = moment(businessTime[0], 'HH:mm');
         let timeList: any[] = [];
 
-
         //15분 기준으로 예약 가능 closeTime
         while (startTime <= closeTime) {
             let endTime = moment(startTime, 'HH:mm:ss').add(duration, 'm');
+
             timeList.push({
                 "text": {
                     "type": "plain_text",
@@ -28,7 +28,6 @@ class TimeManager {
         }
 
         const checkTime = await this.checkDupTime(timeList, room_number, new Date(date))
-
         return checkTime.length > 0 ? checkTime : blockManager.noAbleTime();
 
     }
@@ -37,14 +36,10 @@ class TimeManager {
 
         const meetingList = await dbs.Meeting.hasMeetingOnDate(selectedDate, room_number)
 
-        const sortedMeetingList = meetingList.sort((a: any, b: any) =>
-            a.start.localeCompare(b.start)
-        );
-
         let startIdx: number | undefined;
         let endIdx: number | undefined;
 
-        _.forEach(sortedMeetingList, (meeting: any) => {
+        _.forEach(meetingList, (meeting: any) => {
             _.forEach(originList, (list: any, i: number) => {
 
                 if (list.value.split('-')[0] === moment(meeting.end, 'HH:mm').format('HH:mm')) {
@@ -56,7 +51,7 @@ class TimeManager {
                 else if (moment(meeting.start, 'HH:mm').format('HH:mm') === '10:00') {
                     startIdx = 0;
                 }
-                else if (moment(meeting.end, 'HH:mm').format('HH:mm') === '17:00') {
+                else if (moment(meeting.end, 'HH:mm').format('HH:mm') === '19:00') {
                     endIdx = originList.length;
                 }
                 else if (!startIdx) {

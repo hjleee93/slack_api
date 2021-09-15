@@ -47,22 +47,21 @@ class MeetingModel extends Model {
 
     async hasMeetingAtTime(date: Date, room_number: string, start: string, end: string, meeting_id?: number, transaction?: Transaction) {
 
-        const result = await this.model.findAll({
-            where:
-                {
-                    start: {[Op.gte]: start, [Op.lt]: end},
-                    room_number,
-                    date,
-                    id: {
-                        [Op.not]: meeting_id
-                    }
+        const result = await this.model.findOne({
+            where: {
+                start: {[Op.gte]: start, [Op.lt]: end},
+                room_number,
+                date,
+                id: {
+                    [Op.not]: meeting_id
                 }
+            },
+            order: [['start']],
         }, transaction);
         return result;
     }
 
     async deleteMeeting(meeting_id: string, user: any, transaction?: Transaction) {
-
 
         const result = await this.model.destroy({where: {id: meeting_id, user_id: user.id}, transaction});
         return result;
@@ -73,13 +72,12 @@ class MeetingModel extends Model {
 
         if (!data.start || !data.end) {
             throw new Error('시간을 선택해주세요')
-        }
-        else {
+        } else {
             const meetingInfo = this.createMeetingForm({data: data, user: user});
             const members = meetingInfo.members;
             const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, undefined, transaction);
 
-            if (hasMeeting && hasMeeting.length === 0) {
+            if (!hasMeeting) {
 
                 const meeting = await this.model.create(meetingInfo, transaction);
 
@@ -94,23 +92,19 @@ class MeetingModel extends Model {
                 }
 
                 await dbs.Participant.bulkCreate(members, transaction)
-                const msgInfo = await slackApi.sendDm({members, meetingInfo, text:'회의가 예약되었습니다. 확인해주세요'})
+                const msgInfo = await slackApi.sendDm({members, meetingInfo, text: '회의가 예약되었습니다. 확인해주세요'})
                 const result = await dbs.Message.createMsg(msgInfo, meeting.id)
+                console.log(result)
 
-
-
-
-
-            }
-            else {
+            } else {
                 throw new Error('이미 등록된 예약이 있습니다.')
             }
         }
 
     }
 
-    meetingList = async (user: { id: string, username: string, name: string, team_id: string }) => {
-
+    // meetingList = async (user: { id: string, username: string, name: string, team_id: string }) => {
+    meetingList = async () => {
         const meetingList = await this.model.findAll({
             where: {
                 date: {
@@ -123,11 +117,9 @@ class MeetingModel extends Model {
 
             }]
         })
+        return meetingList
 
-        const result = _.map(meetingList, (list: any) => {
-            return blockManager.meetingList(list, user)
-        })
-        return result
+
     }
 
 
@@ -137,7 +129,7 @@ class MeetingModel extends Model {
 
         const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, meeting_id, transaction);
 
-        if (hasMeeting && hasMeeting.length === 0) {
+        if (!hasMeeting) {
 
             const members = data.members;
 
@@ -153,19 +145,15 @@ class MeetingModel extends Model {
 
             try {
                 await this.model.update(meetingInfo, {where: {id: meeting_id}}, transaction);
-
                 await dbs.Participant.destroy({meeting_id}, transaction);
                 await dbs.Participant.bulkCreate(members, transaction);
 
-              const result = await dbs.Message.getMsgInfo(meeting_id)
-                await slackApi.deleteDm({channel:result.channel_id, ts:result.message_id})
-              // await slackApi.updateDm({channel:result.channel_id, ts:result.message_id, meetingInfo})
-                await slackApi.sendDm({members, meetingInfo, text:'회의가 수정되었습니다. 확인해주세요 '});
+                return meetingInfo;
+
             } catch (e: any) {
                 throw new Error(e.message)
             }
-        }
-        else {
+        } else {
             throw new Error('이미 등록된 예약이 있습니다.')
         }
 

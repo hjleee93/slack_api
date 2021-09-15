@@ -1,4 +1,4 @@
 export default {
-    token: 'xoxb-2409863706817-2407536745683-YhjXsIVWhaiTU1RRQkeVmzM1',
-    signingSecret: '564d1cf10f1afffb22dd6db94f6b6875',
+    token: 'xoxb-2351406779158-2492832498243-SKBsHqEjJfMujOOAYLbf7vfV',
+    signingSecret: '45c87f8cec9fc9b6c50ef5ff33eb2cb0',
 }

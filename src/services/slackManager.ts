@@ -5,6 +5,7 @@ import timeManager from "./timeManager";
 import {dbs} from "../commons/globals";
 import * as _ from "lodash";
 import slackApi from "./slackApi";
+import eventManager from "./eventManager";
 
 
 class SlackManager {
@@ -12,36 +13,45 @@ class SlackManager {
     private isEdit: boolean = false;
     private meetingId: number = 0;
 
+
     initLocalData(user_id: string) {
         tempSaver.deleteForm(user_id);
         this.isEdit = false;
         this.meetingId = 0;
     }
 
+
     async events(params: any) {
-        console.log(params)
+
         const {type, user, channel, tab, text, subtype} = params.event || params;
 
-        if (user) {
-            const startTime = await dbs.WorkLog.hasWorkStart(user)
+        const user_id: string = user;
+
+        if (user_id) {
             if (type === 'app_home_opened') {
-
-                let homeBlock = [
-                    blockManager.home.header(),
-                    blockManager.home.workAlarm(startTime ? startTime.start : ''),
-                    ...blockManager.workSection(),
-                    blockManager.divider(),
-                    ...blockManager.meetingSection()
-                ];
-
-                await slackApi.displayHome(user, homeBlock);
+                await eventManager.openHome(user_id)
+                await dbs.User.createUser(user_id)
             }
         }
         return params
     }
 
+    async slashCommand(params: any){
+        const {token, team_id, channel_id, user_id, user_name, command, trigger_id} = JSON.parse(params);
+
+        if(command === '/회의실예약'){
+            tempSaver.createData(user_id);
+            const modal = await blockManager.meetingModal()
+            await slackApi.openModal(modal, trigger_id)
+        }
+
+    }
+
+
     async actions(payload: any) {
-        const {token, trigger_id, user, actions, type, container, view} = JSON.parse(payload);
+        const {token, trigger_id, user, actions, type, container, view, callback_id} = JSON.parse(payload);
+        //user{id:string, username:string, name:string, team_id: string}
+
         let startTime = await dbs.WorkLog.hasWorkStart(user.id)
 
         //modal submission
@@ -50,15 +60,7 @@ class SlackManager {
             const submitType = view.submit.text
             const meetingList = await dbs.Meeting.meetingList(user);
             if (submitType.toLowerCase() === 'edit') {
-
-                dbs.Meeting.editMeeting(tempSaver.meetingForm(user.id), this.meetingId, user)
-                    .then(() => {
-                        blockManager.openConfirmModal(trigger_id, "예약 수정이 완료되었습니다.")
-                    })
-                    .catch((e: any) => {
-                        blockManager.openConfirmModal(trigger_id, e.message)
-                    })
-
+                await eventManager.editMeeting(this.meetingId, user, trigger_id);
 
             } else {
                 dbs.Meeting.createMeeting(tempSaver.meetingForm(user.id), user)
@@ -67,7 +69,8 @@ class SlackManager {
 
                     })
                     .catch((e: any) => {
-                        blockManager.openConfirmModal(trigger_id, e.message)
+                        return blockManager.updateConfirmModal(e.message)
+                        // blockManager.openConfirmModal(trigger_id, e.message)
                     })
             }
             const list_block = [
@@ -106,17 +109,16 @@ class SlackManager {
             ]
             await slackApi.displayHome(user.id, blocks)
 
-        } else if (actions && actions[0].action_id.match(/work_end/)) {
+        }
+        else if (actions && actions[0].action_id.match(/work_end/)) {
             await dbs.WorkLog.workEnd(user, trigger_id)
 
-        } else if (actions && actions[0].action_id.match(/work_history/)) {
+        }
+        else if (actions && actions[0].action_id.match(/work_history/)) {
             const historyDuration = actions[0].value;
             const workHistory = await dbs.WorkLog.workHistory(user.id, historyDuration);
 
-            //@ts-ignore
-            const sortedHistory = workHistory.sort((a: any, b: any) => new Date(b.start) - new Date(a.start))
-
-            const result = _.map(sortedHistory, (log: any) => {
+            const result = _.map(workHistory, (log: any) => {
                 return blockManager.history.body(log)
             })
 
@@ -134,17 +136,12 @@ class SlackManager {
             await slackApi.displayHome(user.id, history_block)
 
 
-        } else if (actions && actions[0].action_id.match(/meeting_booking/)) {
+        }
+        else if (actions && actions[0].action_id.match(/meeting_booking/) || callback_id&& callback_id.match(/meeting_booking/)) {
             tempSaver.createData(user.id);
             const modal = await blockManager.meetingModal()
             await slackApi.openModal(modal, trigger_id)
-            // .then(() => {
-            //     res.sendStatus(200);
-            // })
-            // .catch((e) => {
-            //     res.sendStatus(500);
-            //     this.initLocalData(user.id);
-            // })
+
 
 
         } else if (actions && actions[0].action_id.match(/meeting_list/)) {
@@ -196,7 +193,8 @@ class SlackManager {
             await slackApi.updateModal(modal, container.view_id)
 
 
-        } else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
+        }
+        else if (actions && actions[0].action_id.match(/select_meeting_option/)) {
 
             const meeting_id = actions[0].selected_option.value
             const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
@@ -249,7 +247,8 @@ class SlackManager {
 
             }
 
-        } else if (actions && actions[0].action_id.match(/meeting_time/)) {
+        }
+        else if (actions && actions[0].action_id.match(/meeting_time/)) {
 
             if (actions[0].selected_option.value === 'null') {
                 const form = tempSaver.updateDate(user.id, moment().add(1, 'day').format('yyyy-MM-DD'))

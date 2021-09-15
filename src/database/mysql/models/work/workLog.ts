@@ -27,10 +27,7 @@ class WorkLogModel extends Model {
 
         const user_id = user.id;
 
-        const userInfo = {
-            user_id,
-            user_name: user.username,
-        };
+
 
         const workStart = {
             user_id,
@@ -40,9 +37,7 @@ class WorkLogModel extends Model {
         const isWorkStart = await this.hasWorkStart(user_id)
 
         if (!isWorkStart) {
-            if (!await dbs.User.findUser(user_id, transaction)) {
-                await dbs.User.create(userInfo, transaction)
-            }
+
             await this.model.create(workStart, transaction)
             return false;
 
@@ -88,7 +83,8 @@ class WorkLogModel extends Model {
                 start: {
                     [Op.gt]: moment().subtract(historyDuration, 'days').toDate()
                 }
-            }
+            },
+            order: [['start']],
         })
 
     }

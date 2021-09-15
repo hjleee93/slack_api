@@ -24,11 +24,6 @@ class TempSaver {
         return this.obj;
     }
 
-    getTempForm(user_id: any){
-        const result = this.obj[user_id]
-        return result;
-    }
-
     async createEditData(data: any, user_id: string) {
         const memberList = await dbs.Participant.findAllUser(data.id)
 

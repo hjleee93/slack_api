@@ -41,9 +41,9 @@ class BlockManager {
 
     }
 
-    meetingList(meetingInfo: any, user: { id: string, username: string, name: string, team_id: string }) {
+    meetingList(meetingInfo: any, user_id:string) {
         let optionList!: any;
-        if (user.id === meetingInfo.user_id) {
+        if (user_id === meetingInfo.user_id) {
             optionList = {
                 "accessory": {
                     "type": "overflow",
@@ -76,7 +76,7 @@ class BlockManager {
                 "type": "mrkdwn",
                 "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
                     return ` <@${user.user_id}>`
-                })}\n\n 회의실 : ${meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format("HH:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("HH:mm")}\`\`\` `
+                })}\n\n 회의실 : ${meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format("a h:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("h:mm")}\`\`\` `
             },
             ...optionList
         }
@@ -143,14 +143,14 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "미팅에 초대되었습니다."
+                    "text": "회의가 예약되었습니다."
                 }
             },
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()
@@ -173,7 +173,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()
@@ -196,7 +196,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('HH:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('HH:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
                 }
 
             }, this.divider()
@@ -309,16 +309,16 @@ class BlockManager {
                         "value": "booking",
                         "action_id": "meeting_booking"
                     },
-                    {
-                        "type": "button",
-                        "text": {
-                            "type": "plain_text",
-                            "text": "예약리스트",
-                            "emoji": true
-                        },
-                        "value": "delete",
-                        "action_id": "meeting_list2"
-                    }
+                    // {
+                    //     "type": "button",
+                    //     "text": {
+                    //         "type": "plain_text",
+                    //         "text": "예약리스트",
+                    //         "emoji": true
+                    //     },
+                    //     "value": "delete",
+                    //     "action_id": "meeting_list2"
+                    // }
                 ]
             }
 
@@ -372,33 +372,6 @@ class BlockManager {
                     "type": "input",
                     dispatch_action: true,
                     "element": {
-                        "type": "static_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select an item",
-                            "emoji": true
-                        },
-                        "options": this.meetingRoom(),
-                        "initial_option": {
-                            "text": {
-                                "type": "plain_text",
-                                "text": this.meetingRoom()[0].value,
-                                "emoji": true
-                            },
-                            "value": this.meetingRoom()[0].value
-                        },
-                        "action_id": "room_number"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "회의실",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    dispatch_action: true,
-                    "element": {
                         "type": "plain_text_input",
                         "action_id": "meeting_title",
                         "dispatch_action_config": {
@@ -433,6 +406,33 @@ class BlockManager {
                         "emoji": true
                     },
                     "optional": true
+                },
+                {
+                    "type": "input",
+                    dispatch_action: true,
+                    "element": {
+                        "type": "static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select an item",
+                            "emoji": true
+                        },
+                        "options": this.meetingRoom(),
+                        "initial_option": {
+                            "text": {
+                                "type": "plain_text",
+                                "text": this.meetingRoom()[0].value,
+                                "emoji": true
+                            },
+                            "value": this.meetingRoom()[0].value
+                        },
+                        "action_id": "room_number"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "회의실",
+                        "emoji": true
+                    }
                 },
                 {
                     "type": "input",
@@ -657,33 +657,7 @@ class BlockManager {
             "submit": isEdit ? this.modalBase().edit : this.modalBase().submit,
             "close": this.modalBase().close,
             blocks: [
-                {
-                    "type": "input",
-                    dispatch_action: true,
-                    "element": {
-                        "type": "static_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select an item",
-                            "emoji": true
-                        },
-                        "options": this.meetingRoom(),
-                        "initial_option": {
-                            "text": {
-                                "type": "plain_text",
-                                "text": `${initData.room_number}`,
-                                "emoji": true
-                            },
-                            "value": `${initData.room_number}`
-                        },
-                        "action_id": "room_number"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "회의실",
-                        "emoji": true
-                    }
-                },
+
                 {
                     "type": "input",
                     dispatch_action: true,
@@ -723,6 +697,33 @@ class BlockManager {
                         "emoji": true
                     },
                     "optional": true
+                },
+                {
+                    "type": "input",
+                    dispatch_action: true,
+                    "element": {
+                        "type": "static_select",
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select an item",
+                            "emoji": true
+                        },
+                        "options": this.meetingRoom(),
+                        "initial_option": {
+                            "text": {
+                                "type": "plain_text",
+                                "text": `${initData.room_number}`,
+                                "emoji": true
+                            },
+                            "value": `${initData.room_number}`
+                        },
+                        "action_id": "room_number"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "회의실",
+                        "emoji": true
+                    }
                 },
                 {
                     "type": "input",
@@ -825,234 +826,6 @@ class BlockManager {
 
     }
 
-    async editModal(initData: any, timeList: any[]) {
-        let initMember = {}
-        if (initData.members) {
-            initMember = {
-                "type": "input",
-                dispatch_action: true,
-                "element": {
-                    "type": "multi_users_select",
-                    "placeholder": {
-                        "type": "plain_text",
-                        "text": "Select users",
-                        "emoji": true
-                    },
-                    "action_id": "participant_list",
-                    initial_users: initData.members
-                },
-                "label": {
-                    "type": "plain_text",
-                    "text": "미팅 참여자",
-                    "emoji": true
-                }
-            }
-        }
-        else {
-            initMember = {
-                "type": "input",
-                dispatch_action: true,
-                "element": {
-                    "type": "multi_users_select",
-                    "placeholder": {
-                        "type": "plain_text",
-                        "text": "Select users",
-                        "emoji": true
-                    },
-                    "action_id": "participant_list",
-                },
-                "label": {
-                    "type": "plain_text",
-                    "text": "미팅 참여자",
-                    "emoji": true
-                }
-            }
-        }
-
-
-        const modal = {
-            type: 'modal',
-            notify_on_close: true,
-            "title": this.modalBase().title,
-            "submit": this.modalBase().edit,
-            "close": this.modalBase().close,
-            blocks: [
-                {
-                    "type": "input",
-                    dispatch_action: true,
-                    "element": {
-                        "type": "static_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Select an item",
-                            "emoji": true
-                        },
-                        "options": this.meetingRoom(),
-                        "initial_option": {
-                            "text": {
-                                "type": "plain_text",
-                                "text": initData.room_number,
-                                "emoji": true
-                            },
-                            "value": initData.room_number
-                        },
-                        "action_id": "room_number"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "회의실",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    dispatch_action: true,
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "meeting_title",
-                        "dispatch_action_config": {
-                            "trigger_actions_on": [
-                                "on_character_entered"
-                            ]
-                        },
-                        "initial_value": initData.title,
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "안건",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "input",
-                    dispatch_action: true,
-                    "element": {
-                        "type": "plain_text_input",
-                        "multiline": true,
-                        "action_id": "description",
-                        "initial_value": initData.description,
-                        "dispatch_action_config": {
-                            "trigger_actions_on": [
-                                "on_character_entered"
-                            ]
-                        }
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "자세히",
-                        "emoji": true
-                    },
-                    "optional": true
-                },
-                {
-                    "type": "input",
-                    dispatch_action: true,
-                    "element": {
-                        "type": "datepicker",
-                        "initial_date": initData.date,
-                        "action_id": "selected_date"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "미팅 할 날짜",
-                        "emoji": true
-                    }
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "static_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "기간",
-                                "emoji": true
-                            },
-                            "options": [
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": `15분`,
-                                        "emoji": true
-                                    },
-                                    "value": '15'
-                                },
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": `30분`,
-                                        "emoji": true
-                                    },
-                                    "value": '30'
-                                },
-
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": `45분`,
-                                        "emoji": true
-                                    },
-                                    "value": '45'
-                                },
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": `1시간`,
-                                        "emoji": true
-                                    },
-                                    "value": '60'
-                                },
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": `1시간 30분`,
-                                        "emoji": true
-                                    },
-                                    "value": '90'
-                                },
-                                {
-                                    "text": {
-                                        "type": "plain_text",
-                                        "text": `2시간`,
-                                        "emoji": true
-                                    },
-                                    "value": '120'
-                                }
-
-                            ],
-                            initial_option: {
-                                "text": {
-                                    "type": "plain_text",
-                                    "text": `${initData.duration >= 60 ? initData.duration == 90 ? '1시간 30분' : initData.duration / 60 + '시간' : initData.duration + '분'}`,
-                                    "emoji": true
-                                },
-                                "value": `${initData.duration}`
-                            },
-                            "action_id": "meeting_duration"
-                        },
-                        //회의 끝
-                        {
-                            "type": "static_select",
-                            "placeholder": {
-                                "type": "plain_text",
-                                "text": "사용 가능한 시간",
-                                "emoji": true
-                            },
-                            "options": timeList,
-                            "action_id": "meeting_time"
-                        }
-                    ]
-                },
-                //참석자
-                initMember
-
-            ]
-        }
-
-        return modal
-
-
-    }
 
     divider() {
         return {

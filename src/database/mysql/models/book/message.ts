@@ -14,29 +14,22 @@ class MessageModel extends Model {
         }
     }
 
-    async createMsg(msgInfo:any, meeting_id: string, transaction?: Transaction){
-       const info = {
-            user_id : msgInfo.message.user,
-            message_id :msgInfo.ts,
-            channel_id : msgInfo.channel,
-           meeting_id
+    async createMsg(msgInfo: any, meeting_id: string, transaction?: Transaction) {
+        const info = {
+            user_id: msgInfo.data.message.user,
+            message_id: msgInfo.data.ts,
+            channel_id: msgInfo.data.channel,
+            meeting_id
         }
-        await this.model.create(info, transaction)
+       return await this.model.create(info, transaction)
     }
 
-    async getMsgInfo(meeting_id: number){
+    async getMsgInfo(meeting_id: number) {
 
-      const result=  await this.model.findOne({where:{meeting_id}})
+        const result = await this.model.findOne({where: {meeting_id}})
         return result
 
     }
-
-
-
-
-
-
-
 
 
 }

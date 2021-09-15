@@ -3,6 +3,15 @@ import axios from "axios";
 import * as qs from "qs";
 import blockManager from "./blockManager";
 
+const url = {
+    view_publish: 'https://slack.com/api/views.publish',
+    chat_post_msg: 'https://slack.com/api/chat.postMessage',
+}
+
+function apiPost(url: string, args: any) {
+    return axios.post(url, args);
+}
+
 class SlackApi {
 
     displayHome = async (user_id: any, block: any) => {
@@ -20,22 +29,31 @@ class SlackApi {
             })
         };
 
-        return await axios.post('https://slack.com/api/views.publish', qs.stringify(args));
+        return await apiPost(url.view_publish, qs.stringify(args))
     }
 
     sendDm = async ({members, meetingInfo, text, type}: any) => {
+        let blocks: any = [];
+        if (type === 'delete') {
+            blocks = blockManager.deleteDmJson(meetingInfo);
+        } else if (type === 'edit') {
+            blocks = blockManager.editDmJson(meetingInfo);
+        } else {
+            blocks = blockManager.dmJson(meetingInfo);
+        }
+
 
         for (let i = 0; i < members.length; i++) {
 
             const args = {
                 token: slackConfig.token,
                 channel: members[i].user_id,
-                blocks: JSON.stringify(type === 'delete' ?blockManager.deleteDmJson(meetingInfo) : blockManager.dmJson(meetingInfo)),
+                blocks,
                 text
             };
 
-           const result = await axios.post('https://slack.com/api/chat.postMessage', qs.stringify(args));
-           return result.data
+            return await axios.post(url.chat_post_msg, qs.stringify(args));
+
         }
     }
 
@@ -57,13 +75,12 @@ class SlackApi {
             token: slackConfig.token,
             ts,
             channel,
-            blocks:JSON.stringify(blockManager.editDmJson(meetingInfo))
+            blocks: JSON.stringify(blockManager.editDmJson(meetingInfo))
         };
 
-       console.log( await axios.post('https://slack.com/api/chat.update',  qs.stringify(args)));
+        await axios.post('https://slack.com/api/chat.update', qs.stringify(args));
 
     }
-
 
 
     async updateModal(modal: any, view_id: any) {
@@ -97,9 +114,10 @@ class SlackApi {
         })
     }
 
-    getBotInfo  =async () =>{
-        const result = await axios.get( 'https://slack.com/api/bots.info',{
-            headers: {Authorization: `Bearer ${slackConfig.token}`},})
+    getBotInfo = async () => {
+        const result = await axios.get('https://slack.com/api/bots.info', {
+            headers: {Authorization: `Bearer ${slackConfig.token}`},
+        })
         console.log(result)
     }
 
