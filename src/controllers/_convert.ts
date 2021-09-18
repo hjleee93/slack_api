@@ -31,7 +31,6 @@ export default function convert(func: Function, middleware: boolean = false) {
             const params = _.assignIn({}, req.body, req.query, req.params);
 
             const result = await func(params , undefined, {req, res});
-
             if (middleware) {
                 return next();
             }

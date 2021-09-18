@@ -2,6 +2,7 @@ import slackConfig from "../../config/slack";
 import axios from "axios";
 import * as qs from "qs";
 import blockManager from "./blockManager";
+import {dbs} from "../commons/globals";
 
 const url = {
     view_publish: 'https://slack.com/api/views.publish',
@@ -36,37 +37,46 @@ class SlackApi {
         let blocks: any = [];
         if (type === 'delete') {
             blocks = blockManager.deleteDmJson(meetingInfo);
-        } else if (type === 'edit') {
+        }
+        else if (type === 'edit') {
             blocks = blockManager.editDmJson(meetingInfo);
-        } else {
+        }
+        else if (type === 'create') {
             blocks = blockManager.dmJson(meetingInfo);
         }
-
+        const msgObj: any = [];
 
         for (let i = 0; i < members.length; i++) {
 
             const args = {
                 token: slackConfig.token,
                 channel: members[i].user_id,
-                blocks,
+                blocks: JSON.stringify(blocks),
                 text
             };
 
-            return await axios.post(url.chat_post_msg, qs.stringify(args));
-
+            const result = await axios.post(url.chat_post_msg, qs.stringify(args));
+            console.log(result)
+            msgObj.push(result)
         }
+
+        return msgObj;
     }
 
-    deleteDm = async ({channel, ts}: any) => {
+    deleteDm = async (deleteList: any[]) => {
+        console.log(deleteList)
 
-        const args = {
-            token: slackConfig.token,
-            ts,
-            channel,
-        };
+        // {channel: result.channel_id, ts: result.message_id}
+        for (let i = 0; i < deleteList.length; i++) {
+            const args = {
+                token: slackConfig.token,
+                ts: deleteList[i].message_id,
+                channel: deleteList[i].channel_id,
+            };
 
-        await axios.post('https://slack.com/api/chat.delete', qs.stringify(args));
-
+         const result =    await axios.post('https://slack.com/api/chat.delete', qs.stringify(args));
+         console.log(result)
+        }
     }
 
     updateDm = async ({channel, ts, meetingInfo}: any) => {
@@ -90,6 +100,18 @@ class SlackApi {
             view_id: view_id
         };
         await axios.post('https://slack.com/api/views.update', qs.stringify(args))
+
+    }
+
+    async errorModal(modal: any, trigger_id: any) {
+        const args = {
+            token: slackConfig.token,
+            trigger_id,
+            view: JSON.stringify(modal)
+        };
+
+        const result = await axios.post('https://slack.com/api/views.push', qs.stringify(args))
+        console.log(result)
     }
 
 
@@ -97,12 +119,12 @@ class SlackApi {
 
         const args = {
             token: slackConfig.token,
-            trigger_id: trigger_id,
+            trigger_id,
             view: JSON.stringify(modal)
         };
 
-        await axios.post('https://slack.com/api/views.open', qs.stringify(args));
-
+        const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
+        console.log(result)
     };
 
     async getUserInfo(user_id: string) {

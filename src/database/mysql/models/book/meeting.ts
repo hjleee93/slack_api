@@ -24,6 +24,7 @@ class MeetingModel extends Model {
 
     async afterSync(): Promise<void> {
         this.model.hasMany(dbs.Participant.model, {sourceKey: 'id', foreignKey: 'meeting_id'});
+        this.model.hasMany(dbs.Msg.model, {sourceKey: 'id', foreignKey: 'meeting_id'});
     }
 
     async meetingInfo(meeting_id: string) {
@@ -72,9 +73,11 @@ class MeetingModel extends Model {
 
         if (!data.start || !data.end) {
             throw new Error('시간을 선택해주세요')
-        } else {
+        }
+        else {
             const meetingInfo = this.createMeetingForm({data: data, user: user});
             const members = meetingInfo.members;
+
             const hasMeeting = await this.hasMeetingAtTime(new Date(meetingInfo.date), meetingInfo.room_number, meetingInfo.start, meetingInfo.end, undefined, transaction);
 
             if (!hasMeeting) {
@@ -90,13 +93,11 @@ class MeetingModel extends Model {
                     }
                     members[i] = obj
                 }
-
                 await dbs.Participant.bulkCreate(members, transaction)
-                const msgInfo = await slackApi.sendDm({members, meetingInfo, text: '회의가 예약되었습니다. 확인해주세요'})
-                const result = await dbs.Message.createMsg(msgInfo, meeting.id)
-                console.log(result)
+                return {meetingInfo, meetingId: meeting.id};
 
-            } else {
+            }
+            else {
                 throw new Error('이미 등록된 예약이 있습니다.')
             }
         }
@@ -153,7 +154,8 @@ class MeetingModel extends Model {
             } catch (e: any) {
                 throw new Error(e.message)
             }
-        } else {
+        }
+        else {
             throw new Error('이미 등록된 예약이 있습니다.')
         }
 

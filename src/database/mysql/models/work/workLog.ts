@@ -27,8 +27,6 @@ class WorkLogModel extends Model {
 
         const user_id = user.id;
 
-
-
         const workStart = {
             user_id,
             start: moment().toDate()

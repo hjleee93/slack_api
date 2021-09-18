@@ -41,7 +41,20 @@ class BlockManager {
 
     }
 
-    meetingList(meetingInfo: any, user_id:string) {
+    noMeeting() {
+        return [{
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": "예약된 회의가 없습니다.",
+                "emoji": true
+            }
+        }]
+
+
+    }
+
+    meetingList(meetingInfo: any, user_id: string) {
         let optionList!: any;
         if (user_id === meetingInfo.user_id) {
             optionList = {
@@ -354,16 +367,17 @@ class BlockManager {
     }
 
     async meetingModal() {
-        const currTime = moment().isBefore(moment(slackManager.businessTime, 'HH:mm')) ? moment(slackManager.businessTime, 'HH:mm') : moment()
-        //시간 반올림
-        const remainder = 15 - currTime.minute() % 15
-
-        //현재 시간 이후로만 예약가능
-        const timeList: any = await timeManager.timeList(30, [currTime.add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], moment().toDate(), this.meetingRoom()[0].value)
+        const form = {
+            room_number: this.meetingRoom()[0].value,
+            date:moment().format('yyyy-MM-DD'),
+            duration: 30,
+        }
+        const timeList: any =await this.timeList(form)
 
         const modal = {
             type: 'modal',
             notify_on_close: true,
+            // callback_id: "modal_callback",
             "title": this.modalBase().title,
             "submit": this.modalBase().submit,
             "close": this.modalBase().close,
@@ -653,6 +667,7 @@ class BlockManager {
         const modal = {
             type: 'modal',
             notify_on_close: true,
+            // callback_id: "modal_callback",
             "title": this.modalBase().title,
             "submit": isEdit ? this.modalBase().edit : this.modalBase().submit,
             "close": this.modalBase().close,
@@ -834,9 +849,9 @@ class BlockManager {
     }
 
     //모달 열린 상태에서 업데이트
-    updateConfirmModal(text: string) {
+    async updateConfirmModal(text: string) {
         return {
-            "response_action": "update",
+            "response_action": "push",
             "view": {
                 "type": "modal",
                 "title": {
@@ -884,21 +899,31 @@ class BlockManager {
                             "text": text,
                             "emoji": true
                         }
-                    }
+
+                    },
+
                 ]
 
             }
 
 
-        await slackApi.openModal(modal, trigger_id)
+     await slackApi.openModal(modal, trigger_id)
+
     };
 
     async timeList(form: any) {
         let result !: any
         //오늘 날짜 선택한 경우
+
         const remainder = 15 - moment().minute() % 15
         if (form.date === moment().format('yyyy-MM-DD')) {
-            result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], form.date, form.room_number)
+            if (moment().isBefore(moment('10:00:00', 'HH:mm:ss'))) {
+                result = await timeManager.timeList(form.duration, ['10:00:00', '19:00:00'], form.date, form.room_number)
+            }
+            else {
+                result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], form.date, form.room_number)
+            }
+
         }
         else if (moment(form.date).isBefore(moment())) {
             result = this.noAbleTime()

@@ -7,6 +7,7 @@ class TimeManager {
 
     async timeList(duration: number, businessTime: any[], date: any, room_number: string) {
 
+
         let closeTime = moment(businessTime[1], 'HH:mm').subtract(duration, 'm')
         let startTime = moment(businessTime[0], 'HH:mm');
         let timeList: any[] = [];
