@@ -14,6 +14,7 @@ class ParticipantModel extends Model {
 
     async afterSync(): Promise<void> {
         this.model.belongsTo(dbs.Meeting.model, {foreignKey: 'meeting_id', targetKey: 'id'});
+        this.model.hasOne(dbs.Msg.model, {foreignKey: 'meeting_id', targetKey: 'id'});
     }
 
 
@@ -26,6 +27,8 @@ class ParticipantModel extends Model {
         const result = await this.model.findAll({where: {meeting_id}})
         return result;
     }
+
+
 }
 
 

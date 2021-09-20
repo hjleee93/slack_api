@@ -37,39 +37,24 @@ class TimeManager {
 
         const meetingList = await dbs.Meeting.hasMeetingOnDate(selectedDate, room_number)
 
-        let startIdx: number | undefined;
-        let endIdx: number | undefined;
-
         _.forEach(meetingList, (meeting: any) => {
-            _.forEach(originList, (list: any, i: number) => {
-
-                if (list.value.split('-')[0] === moment(meeting.end, 'HH:mm').format('HH:mm')) {
-                    endIdx = i;
+            const startMoment = moment(meeting.start, 'HH:mm')
+            const endMoment = moment(meeting.end, 'HH:mm')
+            for (let i = originList.length - 1; i >= 0; i -= 1) {
+                const startOriginMoment = moment(originList[i].value.split('-')[0], 'HH:mm')
+                const endOriginMoment = moment(originList[i].value.split('-')[1], 'HH:mm')
+                if (
+                    startOriginMoment.isBetween(startMoment, endMoment, undefined, '[)') ||
+                    endOriginMoment.isBetween(startMoment, endMoment, undefined, '(]')
+                    || (startOriginMoment.isSameOrBefore(startMoment) &&
+                        endMoment.isSameOrBefore(endOriginMoment))
+                ) {
+                    originList.splice(i, 1)
                 }
-                else if (list.value.split('-')[1] === moment(meeting.start, 'HH:mm').format('HH:mm')) {
-                    startIdx = i;
-                }
-                else if (moment(meeting.start, 'HH:mm').format('HH:mm') === '10:00') {
-                    startIdx = 0;
-                }
-                else if (moment(meeting.end, 'HH:mm').format('HH:mm') === '19:00') {
-                    endIdx = originList.length;
-                }
-                else if (!startIdx) {
-                    startIdx = 0;
-                }
-
-            })
-
-            if ((startIdx || startIdx === 0) && endIdx) {
-                originList.splice(startIdx, endIdx - startIdx);
             }
 
-            startIdx = undefined;
-            endIdx = undefined;
+
         })
-
-
         return originList;
     }
 }

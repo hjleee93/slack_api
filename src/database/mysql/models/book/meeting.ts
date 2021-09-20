@@ -162,6 +162,26 @@ class MeetingModel extends Model {
 
     }
 
+
+    async allMsgUsers(meeting_id: number) {
+        const result = await this.model.findOne({
+            where: {id: meeting_id},
+            include: [
+                {
+                    model: dbs.Msg.model,
+                    attributes: ['user_id']
+                },
+                {
+                    model: dbs.Participant.model,
+                    attributes: ['user_id']
+                },
+            ]
+        })
+
+        return result;
+
+    }
+
     createMeetingForm({data, user}: any) {
         const createMeeting = {
             user_id: user.id,

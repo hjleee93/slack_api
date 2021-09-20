@@ -17,16 +17,18 @@ class MsgModel extends Model {
 
     async afterSync(): Promise<void> {
         this.model.belongsTo(dbs.Meeting.model, {foreignKey: 'meeting_id', targetKey: 'id'});
+        this.model.hasOne(dbs.Participant.model, {foreignKey: 'meeting_id', targetKey: 'id'});
     }
 
 
-    async createMsg(msgInfo: any[], meeting_id: number, transaction?: Transaction) {
+    async createMsg(msgInfo: any[], meeting_id: number,meetingInfo:any, transaction?: Transaction) {
 
         const info: any[] = [];
+        console.log(meetingInfo)
 
         for (let i = 0; i < msgInfo.length; i++) {
             let obj = {
-                user_id: msgInfo[i].data.message.user,
+                user_id: meetingInfo.members[i].user_id,
                 message_id: msgInfo[i].data.ts,
                 channel_id: msgInfo[i].data.channel,
                 meeting_id,
@@ -43,6 +45,7 @@ class MsgModel extends Model {
         return result
 
     }
+
 
 
 }
