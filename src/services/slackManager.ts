@@ -59,16 +59,28 @@ class SlackManager {
             const submitType = view.submit.text;
             let result: any;
 
-            if (submitType.toLowerCase() === 'edit') {
-               await eventManager.editMeeting(this.meetingId, user, trigger_id);
-                result =await blockManager.updateConfirmModal( "예약이 수정되었습니다.");
+            switch (submitType.toLowerCase()) {
+                case 'edit':
+                    try {
+                        await eventManager.editMeeting(this.meetingId, user);
+                        result = await blockManager.updateConfirmModal("예약이 수정되었습니다.");
+                    } catch (e: any) {
+                        result = await blockManager.updateConfirmModal(e.message)
+                    }
+                    break;
+                case 'submit':
+                    try {
+                        await eventManager.createMeeting(user);
+                        result = await blockManager.updateConfirmModal("예약이 완료되었습니다.");
+                    } catch (e: any) {
+                        result = await blockManager.updateConfirmModal(e.message)
+                    }
+                    break;
             }
-            else {
-                await eventManager.createMeeting(user, trigger_id, view.id);
-                result = await blockManager.updateConfirmModal( "예약이 완료되었습니다.");
-            }
+
             this.initLocalData(user.id);
             await eventManager.openHome(user.id)
+
             return result;
 
         }
@@ -76,6 +88,7 @@ class SlackManager {
             this.initLocalData(user.id);
         }
 
+        /* 출퇴근 관련 */
         if (actions && actions[0].action_id.match(/work_start/)) {
 
             const workLog = await dbs.WorkLog.workStart(user, trigger_id);
@@ -125,6 +138,8 @@ class SlackManager {
 
 
         }
+        /* /출퇴근 관련 */
+
         else if (actions && actions[0].action_id.match(/meeting_booking/) || callback_id && callback_id.match(/meeting_booking/)) {
             tempSaver.createData(user.id);
             const modal = await blockManager.meetingModal()
@@ -165,45 +180,15 @@ class SlackManager {
 
             }
             else if (actions[0].selected_option.text.text.toLowerCase() === 'Cancel Meeting'.toLowerCase()) {
-
-                const deleteMeeting = await dbs.Meeting.deleteMeeting(meeting_id, user)
-
-                if (deleteMeeting === 1) {
-                    const members = await dbs.Participant.findAllUser(meeting_id)
-                    await dbs.Participant.destroy({meeting_id});
-
-
-                    const result = await dbs.Msg.getMsgInfo(meeting_id)
-                    console.log(result)
-
-                    await slackApi.deleteDm(result)
-                    //삭제 디엠 보내기
-                    await slackApi.sendDm({
-                        members,
-                        meetingInfo: form,
-                        type: 'delete',
-                        text: '회의가 취소되었습니다. 알림을 확인해주세요'
-                    });
-                }
-                tempSaver.deleteForm(user.id);
-                await dbs.Msg.destroy({meeting_id})
-                await eventManager.openHome(user.id);
+                await eventManager.deleteMeeting(meeting_id, user, form);
                 await blockManager.openConfirmModal(trigger_id, '해당 예약은 삭제되었습니다.');
 
             }
+            await eventManager.openHome(user.id);
 
         }
         else if (actions && actions[0].action_id.match(/meeting_time/)) {
-
-            // if (actions[0].selected_option.value === 'null') {
-            //     const form = tempSaver.updateDate(user.id, moment().add(1, 'day').format('yyyy-MM-DD'))
-            //     await eventManager.updateModal(form, container.view_id, this.isEdit)
-            // }
-            // else {
             tempSaver.updateTime(user.id, actions[0].selected_option.value)
-            // }
-
-
         }
         else if (actions && actions[0].action_id.match(/participant_list/)) {
             tempSaver.updateMembers(user.id, actions[0].selected_users)

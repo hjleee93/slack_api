@@ -63,7 +63,6 @@ class SlackApi {
     }
 
     deleteDm = async (deleteList: any[]) => {
-        console.log(deleteList)
 
         // {channel: result.channel_id, ts: result.message_id}
         for (let i = 0; i < deleteList.length; i++) {
@@ -73,8 +72,7 @@ class SlackApi {
                 channel: deleteList[i].channel_id,
             };
 
-            const result = await axios.post('https://slack.com/api/chat.delete', qs.stringify(args));
-            console.log(result)
+            await axios.post('https://slack.com/api/chat.delete', qs.stringify(args));
         }
     }
 

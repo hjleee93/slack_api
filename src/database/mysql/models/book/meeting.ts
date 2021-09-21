@@ -13,8 +13,8 @@ class MeetingModel extends Model {
         this.name = 'meeting'
         this.attributes = {
             user_id: {type: DataTypes.STRING, allowNull: false},
-            room_number: {type: DataTypes.INTEGER},
-            title: {type: DataTypes.STRING},
+            room_number: {type: DataTypes.INTEGER, allowNull: false},
+            title: {type: DataTypes.STRING, allowNull: false},
             description: {type: DataTypes.STRING},
             date: {type: DataTypes.DATE},
             start: {type: DataTypes.TIME},
@@ -93,7 +93,7 @@ class MeetingModel extends Model {
                     }
                     members[i] = obj
                 }
-                await dbs.Participant.bulkCreate(members, transaction)
+                await dbs.Participant.bulkCreate(members, {transaction})
                 return {meetingInfo, meetingId: meeting.id};
 
             }
@@ -147,7 +147,7 @@ class MeetingModel extends Model {
             try {
                 await this.model.update(meetingInfo, {where: {id: meeting_id}}, transaction);
                 await dbs.Participant.destroy({meeting_id}, transaction);
-                await dbs.Participant.bulkCreate(members, transaction);
+                await dbs.Participant.bulkCreate(members, {transaction});
 
                 return meetingInfo;
 
@@ -163,7 +163,7 @@ class MeetingModel extends Model {
     }
 
 
-    async allMsgUsers(meeting_id: number) {
+    async allMsgUsers(meeting_id: number, transaction?: Transaction) {
         const result = await this.model.findOne({
             where: {id: meeting_id},
             include: [
@@ -176,7 +176,7 @@ class MeetingModel extends Model {
                     attributes: ['user_id']
                 },
             ]
-        })
+        }, transaction)
 
         return result;
 

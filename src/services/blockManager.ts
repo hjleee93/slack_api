@@ -163,7 +163,9 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n *참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                        return ` <@${user.user_id}>`
+                    })}`
                 }
 
             }, this.divider()
@@ -186,7 +188,9 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                        return ` <@${user.user_id}>`
+                    })}`
                 }
 
             }, this.divider()
@@ -209,7 +213,9 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*주제: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}`
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                        return ` <@${user.user_id}>`
+                    })}`
                 }
 
             }, this.divider()

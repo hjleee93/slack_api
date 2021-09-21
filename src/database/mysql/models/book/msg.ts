@@ -35,12 +35,12 @@ class MsgModel extends Model {
             info[i] = obj;
 
         }
-        await this.model.bulkCreate(info, transaction)
+        await this.model.bulkCreate(info, {transaction})
     }
 
-    async getMsgInfo(meeting_id: number) {
+    async getMsgInfo(meeting_id: number,transaction?: Transaction) {
 
-        const result = await this.model.findAll({where: {meeting_id}})
+        const result = await this.model.findAll({where: {meeting_id}}, transaction)
         return result
 
     }

@@ -18,13 +18,13 @@ class ParticipantModel extends Model {
     }
 
 
-    async findUser(user_id: any) {
-        const result = await this.findOne({user_id: user_id})
+    async findUser(user_id: any, transaction?: Transaction) {
+        const result = await this.findOne({user_id: user_id}, transaction)
         return result;
     }
 
-    async findAllUser(meeting_id: number){
-        const result = await this.model.findAll({where: {meeting_id}})
+    async findAllUser(meeting_id: number,transaction?: Transaction ){
+        const result = await this.model.findAll({where: {meeting_id}}, transaction)
         return result;
     }
 
