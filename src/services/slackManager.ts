@@ -56,36 +56,25 @@ class SlackManager {
 
         //modal submission
         if (type === 'view_submission') {
-            const id = view.callback_id;
-
             const submitType = view.submit.text;
+            let result: any;
 
             if (submitType.toLowerCase() === 'edit') {
-                await eventManager.editMeeting(this.meetingId, user, trigger_id);
+               await eventManager.editMeeting(this.meetingId, user, trigger_id);
+                result =await blockManager.updateConfirmModal( "예약이 수정되었습니다.");
             }
             else {
-              const create =   await eventManager.createMeeting(user, trigger_id, view.id);
-              // console.log(create);
-              //   const result = await blockManager.openConfirmModal(trigger_id, "예약이 완료되었습니다.")
-              //   console.log(result);
+                await eventManager.createMeeting(user, trigger_id, view.id);
+                result = await blockManager.updateConfirmModal( "예약이 완료되었습니다.");
             }
-            // if(id === 'modal_callback'){
-                this.initLocalData(user.id);
-                console.log("?")
-                await eventManager.openHome(user.id)
-                // await blockManager.openConfirmModal(trigger_id, "예약이 완료되었습니다.")
+            this.initLocalData(user.id);
+            await eventManager.openHome(user.id)
+            return result;
 
-            //     return;
-            // }
-
-
-
-            // await blockManager.openConfirmModal(trigger_id, "예약이 완료되었습니다.")
         }
         else if (type === "view_closed") {
             this.initLocalData(user.id);
         }
-
 
         if (actions && actions[0].action_id.match(/work_start/)) {
 

@@ -109,8 +109,8 @@ class MeetingModel extends Model {
         const meetingList = await this.model.findAll({
             where: {
                 date: {
-                    [Op.gte]: new Date(moment().format('yyyy-MM-DD')),
-                }
+                    [Op.gte]: new Date(),
+                },
             },
             order: [['date'], ['start']],
             include: [{
@@ -169,7 +169,7 @@ class MeetingModel extends Model {
             include: [
                 {
                     model: dbs.Msg.model,
-                    attributes: ['user_id']
+                    attributes: ['user_id', 'channel_id', 'message_id']
                 },
                 {
                     model: dbs.Participant.model,

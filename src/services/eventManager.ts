@@ -38,32 +38,13 @@ class eventManager {
 
 
             const meetingInfo = await dbs.Meeting.editMeeting(tempSaver.meetingForm(user.id), meeting_id, user)
-
-
-
-
-            // console.log(meetingInfo.members)
-            // await blockManager.openConfirmModal(trigger_id, "예약 수정이 완료되었습니다.")
-
-            //중복유저 제거
-            // const members = await dbs.Participant.findAllUser(meeting_id);
-            // const memberList: any[] = [...members, ...meetingInfo.members]
-            // console.log(memberList)
-
-
             const allMsgUsers = await dbs.Meeting.allMsgUsers(meeting_id)
+            let members: any[] = [...allMsgUsers.msgs, ...allMsgUsers.participants]
+            members = _.uniqBy(members, "user_id");
 
-            let members:any[] = [...allMsgUsers.msgs, ...allMsgUsers.participants]
-
-            members =  _.uniqBy(members, "user_id");
-
-
-            // const msgInfo = await dbs.Msg.getMsgInfo(meeting_id)
-            // // const result = await slackApi.deleteDm({channel: msgInfo.channel_id, ts: msgInfo.message_id, memberList})
-            // // await slackApi.updateDm({channel:result.channel_id, ts:result.message_id, meetingInfo})
-            // //기존 유저 + 새로운 유저한테 보내야됨 수정해야됨
+            await slackApi.deleteDm(allMsgUsers.msgs)
             await slackApi.sendDm({members, meetingInfo, text: '회의가 수정되었습니다. 확인해주세요 ', type: 'edit'});
-        } catch (e:any) {
+        } catch (e: any) {
             await blockManager.openConfirmModal(trigger_id, e.message)
         }
 
@@ -84,7 +65,7 @@ class eventManager {
             // },300)
 
 
-        } catch (e:any) {
+        } catch (e: any) {
             await blockManager.openConfirmModal(trigger_id, e.message)
         }
     }

@@ -24,7 +24,6 @@ class MsgModel extends Model {
     async createMsg(msgInfo: any[], meeting_id: number,meetingInfo:any, transaction?: Transaction) {
 
         const info: any[] = [];
-        console.log(meetingInfo)
 
         for (let i = 0; i < msgInfo.length; i++) {
             let obj = {

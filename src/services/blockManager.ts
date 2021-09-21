@@ -369,10 +369,10 @@ class BlockManager {
     async meetingModal() {
         const form = {
             room_number: this.meetingRoom()[0].value,
-            date:moment().format('yyyy-MM-DD'),
+            date: moment().format('yyyy-MM-DD'),
             duration: 30,
         }
-        const timeList: any =await this.timeList(form)
+        const timeList: any = await this.timeList(form)
 
         const modal = {
             type: 'modal',
@@ -851,7 +851,7 @@ class BlockManager {
     //모달 열린 상태에서 업데이트
     async updateConfirmModal(text: string) {
         return {
-            "response_action": "push",
+            "response_action": "update",
             "view": {
                 "type": "modal",
                 "title": {
@@ -907,7 +907,7 @@ class BlockManager {
             }
 
 
-     await slackApi.openModal(modal, trigger_id)
+        return await slackApi.openModal(modal, trigger_id)
 
     };
 

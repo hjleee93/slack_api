@@ -56,7 +56,6 @@ class SlackApi {
             };
 
             const result = await axios.post(url.chat_post_msg, qs.stringify(args));
-            console.log(result)
             msgObj.push(result)
         }
 
@@ -74,8 +73,8 @@ class SlackApi {
                 channel: deleteList[i].channel_id,
             };
 
-         const result =    await axios.post('https://slack.com/api/chat.delete', qs.stringify(args));
-         console.log(result)
+            const result = await axios.post('https://slack.com/api/chat.delete', qs.stringify(args));
+            console.log(result)
         }
     }
 
@@ -124,7 +123,7 @@ class SlackApi {
         };
 
         const result = await axios.post('https://slack.com/api/views.open', qs.stringify(args));
-        console.log(result)
+        return result;
     };
 
     async getUserInfo(user_id: string) {
