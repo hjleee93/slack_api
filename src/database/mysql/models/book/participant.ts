@@ -1,6 +1,7 @@
 import Model from '../../../_base/model';
-import {DataTypes, Sequelize, Transaction} from 'sequelize';
+import {DataTypes, Op, Sequelize, Transaction} from 'sequelize';
 import {dbs} from '../../../../commons/globals';
+import * as moment from "moment-timezone";
 
 class ParticipantModel extends Model {
     protected initialize(): void {
@@ -14,7 +15,6 @@ class ParticipantModel extends Model {
 
     async afterSync(): Promise<void> {
         this.model.belongsTo(dbs.Meeting.model, {foreignKey: 'meeting_id', targetKey: 'id'});
-        this.model.hasOne(dbs.Msg.model, {foreignKey: 'meeting_id', targetKey: 'id'});
     }
 
 
@@ -27,6 +27,7 @@ class ParticipantModel extends Model {
         const result = await this.model.findAll({where: {meeting_id}}, transaction)
         return result;
     }
+
 
 
 }

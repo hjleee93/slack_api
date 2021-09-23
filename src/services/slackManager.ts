@@ -1,11 +1,13 @@
 import tempSaver from "./tempSaver";
 import blockManager from "./blockManager";
-import * as moment from "moment-timezone";
+
 import timeManager from "./timeManager";
 import {dbs} from "../commons/globals";
 import * as _ from "lodash";
 import slackApi from "./slackApi";
 import eventManager from "./eventManager";
+import slackController from "../controllers/slackController";
+import {eMeetingList} from "../commons/enums";
 
 
 class SlackManager {
@@ -33,17 +35,6 @@ class SlackManager {
             }
         }
         return params
-    }
-
-    async slashCommand(params: any) {
-        const {token, team_id, channel_id, user_id, user_name, command, trigger_id} = JSON.parse(params);
-
-        if (command === '/회의실예약') {
-            tempSaver.createData(user_id);
-            const modal = await blockManager.meetingModal()
-            await slackApi.openModal(modal, trigger_id)
-        }
-
     }
 
 
@@ -170,20 +161,26 @@ class SlackManager {
 
             const meeting_id = actions[0].selected_option.value
             const meetingInfo = await dbs.Meeting.meetingInfo(meeting_id);
-            const form: any = (await tempSaver.createEditData(meetingInfo, user.id))[user.id];
+            if(meetingInfo){
+                const form: any = (await tempSaver.createEditData(meetingInfo, user.id))[user.id];
+                if (actions[0].selected_option.text.text.toLowerCase() === 'Edit Meeting'.toLowerCase()) {
+                    this.isEdit = true
+                    this.meetingId = meeting_id;
 
-            if (actions[0].selected_option.text.text.toLowerCase() === 'Edit Meeting'.toLowerCase()) {
-                this.isEdit = true
-                this.meetingId = meeting_id;
+                    await eventManager.openModal(form, trigger_id, this.isEdit)
 
-                await eventManager.openModal(form, trigger_id, this.isEdit)
+                }
+                else if (actions[0].selected_option.text.text.toLowerCase() === 'Cancel Meeting'.toLowerCase()) {
+                    await eventManager.deleteMeeting(meeting_id, user, form);
+                    await blockManager.openConfirmModal(trigger_id, '해당 예약은 삭제되었습니다.');
 
+                }
+            }else{
+                await blockManager.openConfirmModal(trigger_id,'해당 회의는 취소되었거나 없는 회의입니다.')
             }
-            else if (actions[0].selected_option.text.text.toLowerCase() === 'Cancel Meeting'.toLowerCase()) {
-                await eventManager.deleteMeeting(meeting_id, user, form);
-                await blockManager.openConfirmModal(trigger_id, '해당 예약은 삭제되었습니다.');
 
-            }
+
+
             await eventManager.openHome(user.id);
 
         }
@@ -192,6 +189,11 @@ class SlackManager {
         }
         else if (actions && actions[0].action_id.match(/participant_list/)) {
             tempSaver.updateMembers(user.id, actions[0].selected_users)
+        } else if (actions && actions[0].action_id.match(/my_meeting/)) {
+            await eventManager.openHome(user.id, eMeetingList.mine)
+        }else if (actions && actions[0].action_id.match(/meeting_list/)) {
+            await eventManager.openHome(user.id)
+
         }
 
     }

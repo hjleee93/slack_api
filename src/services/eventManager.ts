@@ -2,33 +2,40 @@ import blockManager from "./blockManager";
 import slackApi from "./slackApi";
 import {dbs} from "../commons/globals";
 import * as _ from "lodash";
+import * as moment from "moment-timezone";
 import tempSaver from "./tempSaver";
 import {Transaction} from "sequelize";
+import {eMeetingList} from "../commons/enums";
+
 
 class eventManager {
 
 
-    async openHome(user_id: any) {
-
+    async openHome(user_id: any, list_type?: number) {
         const startTime = await dbs.WorkLog.hasWorkStart(user_id)
-        const meetings = await dbs.Meeting.meetingList()
+        let meetings = await dbs.Meeting.meetingList()
         let meetingList!: any;
-
+        switch (list_type) {
+            case eMeetingList.mine:
+                meetings = await dbs.Meeting.meetingList(user_id)
+                break;
+            default:
+                meetings = await dbs.Meeting.meetingList();
+        }
         if (meetings?.length === 0) {
             meetingList = blockManager.noMeeting();
-
-        }
-        else {
+        } else {
             meetingList = _.map(meetings, (list: any) => {
                 return blockManager.meetingList(list, user_id)
             })
         }
+
         let homeBlock = [
             // blockManager.home.header(),
             // blockManager.home.workAlarm(startTime ? startTime.start : ''),
             // ...blockManager.workSection(),
             // blockManager.divider(),
-            ...blockManager.meetingSection(),
+            ...blockManager.meetingSection(list_type),
             ...meetingList
         ];
         await slackApi.displayHome(user_id, homeBlock);
@@ -36,6 +43,10 @@ class eventManager {
 
     async editMeeting(meeting_id: number, user: any) {
         return dbs.Meeting.getTransaction(async (transaction: Transaction) => {
+            const editDate =tempSaver.meetingForm(user.id).date
+            if(moment(editDate).isBefore(moment(new Date()).subtract(9,'hours'))){
+                throw {message:'오늘날짜 이전으로는 수정이 불가합니다.'}
+            }
             try {
                 const meetingInfo = await dbs.Meeting.editMeeting(tempSaver.meetingForm(user.id), meeting_id, user, transaction)
                 const allMsgUsers = await dbs.Meeting.allMsgUsers(meeting_id, transaction)

@@ -17,7 +17,6 @@ class MsgModel extends Model {
 
     async afterSync(): Promise<void> {
         this.model.belongsTo(dbs.Meeting.model, {foreignKey: 'meeting_id', targetKey: 'id'});
-        this.model.hasOne(dbs.Participant.model, {foreignKey: 'meeting_id', targetKey: 'id'});
     }
 
 

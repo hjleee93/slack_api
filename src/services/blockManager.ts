@@ -4,9 +4,10 @@ import * as _ from "lodash";
 import timeManager from "./timeManager";
 import slackManager from "./slackManager";
 import slackApi from "./slackApi";
+import {eMeetingList} from "../commons/enums";
 
 class BlockManager {
-    public meetingRoomArr = ['302', '402'];
+    public meetingRoomArr = ['302', '402', 'External meeting'];
 
     history = {
         title(duration: any) {
@@ -89,10 +90,25 @@ class BlockManager {
                 "type": "mrkdwn",
                 "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
                     return ` <@${user.user_id}>`
-                })}\n\n 회의실 : ${meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format("a h:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("h:mm")}\`\`\` `
+                })}\n\n 회의실 : ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format("a h:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("h:mm")}\`\`\` `
             },
             ...optionList
         }
+    }
+
+    dmMeetingList(meetingInfo: any) {
+        const blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `📢*${meetingInfo.title}* \n\n 참석자 : ${_.map(meetingInfo.participants, (user: any) => {
+                        return ` <@${user.user_id}>`
+                    })}\n\n 회의실 : ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n\n \`\`\`${moment(meetingInfo.date, 'yyyy-MM-DD').format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format("a h:mm")} — ${moment(meetingInfo.end, 'HH:mm:ss').format("h:mm")}\`\`\` `
+                },
+            }
+        ]
+        return blocks
     }
 
 
@@ -141,7 +157,7 @@ class BlockManager {
                     "text": `${room}`,
                     "emoji": true
                 },
-                "value": `${room}`
+                "value": `${room === 'External meeting' ? 0 : room}`
             }
         })
 
@@ -163,7 +179,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n *참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n *참석자:* ${_.map(meetingInfo.members, (user: any) => {
                         return ` <@${user.user_id}>`
                     })}`
                 }
@@ -188,7 +204,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
                         return ` <@${user.user_id}>`
                     })}`
                 }
@@ -213,7 +229,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
                         return ` <@${user.user_id}>`
                     })}`
                 }
@@ -303,7 +319,26 @@ class BlockManager {
 
     }
 
-    meetingSection() {
+    meetingSection(list_type?:number) {
+        const button = list_type !== eMeetingList.mine ? {
+            "type": "button",
+            "text": {
+                "type": "plain_text",
+                "text": "My meetings",
+                "emoji": true
+            },
+            "value": "mine",
+            "action_id": "my_meeting"
+        } : {
+            "type": "button",
+            "text": {
+                "type": "plain_text",
+                "text": "All meetings",
+                "emoji": true
+            },
+            "value": "all",
+            "action_id": "meeting_list"
+        }
 
         const blocks = [
             {
@@ -328,16 +363,7 @@ class BlockManager {
                         "value": "booking",
                         "action_id": "meeting_booking"
                     },
-                    // {
-                    //     "type": "button",
-                    //     "text": {
-                    //         "type": "plain_text",
-                    //         "text": "예약리스트",
-                    //         "emoji": true
-                    //     },
-                    //     "value": "delete",
-                    //     "action_id": "meeting_list2"
-                    // }
+                    button
                 ]
             }
 
@@ -347,6 +373,7 @@ class BlockManager {
 
     }
 
+//
     modalBase() {
         const title = {
             "type": "plain_text",
@@ -378,6 +405,7 @@ class BlockManager {
             date: moment().format('yyyy-MM-DD'),
             duration: 30,
         }
+
         const timeList: any = await this.timeList(form)
 
         const modal = {
@@ -418,7 +446,8 @@ class BlockManager {
                             "trigger_actions_on": [
                                 "on_character_entered"
                             ]
-                        }
+                        },
+
                     },
                     "label": {
                         "type": "plain_text",
@@ -441,10 +470,10 @@ class BlockManager {
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": this.meetingRoom()[0].value,
+                                "text": `${this.meetingRoom()[0].value === '0' ? 'External meeting' : this.meetingRoom()[0].value}`,
                                 "emoji": true
                             },
-                            "value": this.meetingRoom()[0].value
+                            "value": `${this.meetingRoom()[0].value}`
                         },
                         "action_id": "room_number"
                     },
@@ -605,8 +634,7 @@ class BlockManager {
                     "emoji": true
                 }
             }
-        }
-        else {
+        } else {
             initMember = {
                 "type": "input",
                 dispatch_action: true,
@@ -655,8 +683,7 @@ class BlockManager {
                 "action_id": "meeting_time"
             }
 
-        }
-        else {
+        } else {
             initSelectedTime =
                 {
                     "type": "static_select",
@@ -733,7 +760,7 @@ class BlockManager {
                         "initial_option": {
                             "text": {
                                 "type": "plain_text",
-                                "text": `${initData.room_number}`,
+                                "text": `${initData.room_number == '0' ? 'External meeting' : initData.room_number}`,
                                 "emoji": true
                             },
                             "value": `${initData.room_number}`
@@ -920,24 +947,52 @@ class BlockManager {
     async timeList(form: any) {
         let result !: any
         //오늘 날짜 선택한 경우
-
+        // console.log(moment().format('yyyy-MM-DD') === moment(form.date).format('yyyy-MM-DD'), moment().format('yyyy-MM-DD'), moment(form.date).format('yyyy-MM-DD'))
+        // console.log(moment(form.date, 'yyyy-MM-DD').isSame(moment(new Date(), 'yyyy-MM-DD')), moment(new Date(), 'yyyy-MM-DD').isSame(moment(form.date, 'yyyy-MM-DD')))
         const remainder = 15 - moment().minute() % 15
-        if (form.date === moment().format('yyyy-MM-DD')) {
+        if (moment().format('yyyy-MM-DD') === moment(form.date).format('yyyy-MM-DD')) {
             if (moment().isBefore(moment('10:00:00', 'HH:mm:ss'))) {
                 result = await timeManager.timeList(form.duration, ['10:00:00', '19:00:00'], form.date, form.room_number)
-            }
-            else {
+            } else {
                 result = await timeManager.timeList(form.duration, [moment().add(remainder, 'm').format('HH:mm:ss'), '19:00:00'], form.date, form.room_number)
             }
 
-        }
-        else if (moment(form.date).isBefore(moment())) {
+        } else if (moment(form.date).isBefore(moment())) {
             result = this.noAbleTime()
-        }
-        else {
+        } else {
             result = await timeManager.timeList(form.duration, slackManager.businessTime, form.date, form.room_number);
         }
         return result;
+    }
+
+    allMeetingList() {
+        return {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": `*전체 회의 리스트입니다.*`
+            }
+        }
+    }
+
+    userMeetingList(user_id: string, user_name: string) {
+        return {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": `*${user_name}님이 포함된 회의 리스트입니다.*`
+            }
+        }
+    }
+
+    dateMeetingInfo(date: Date) {
+        return {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": `*${moment(date).format('yyyy-MM-DD')} 예약된 회의 *`
+            }
+        }
     }
 
 }

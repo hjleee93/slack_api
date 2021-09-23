@@ -73,8 +73,7 @@ class MeetingModel extends Model {
 
         if (!data.start || !data.end) {
             throw new Error('시간을 선택해주세요')
-        }
-        else {
+        } else {
             const meetingInfo = this.createMeetingForm({data: data, user: user});
             const members = meetingInfo.members;
 
@@ -96,8 +95,7 @@ class MeetingModel extends Model {
                 await dbs.Participant.bulkCreate(members, {transaction})
                 return {meetingInfo, meetingId: meeting.id};
 
-            }
-            else {
+            } else {
                 throw new Error('이미 등록된 예약이 있습니다.')
             }
         }
@@ -105,21 +103,33 @@ class MeetingModel extends Model {
     }
 
     // meetingList = async (user: { id: string, username: string, name: string, team_id: string }) => {
-    meetingList = async () => {
-        const meetingList = await this.model.findAll({
-            where: {
+    meetingList = async (user_id?: string, date?: Date) => {
+        const userCondition: any = user_id ? {user_id: {[Op.eq]: user_id}} : {};
+        const dateCondition: any = date ?
+            {
                 date: {
-                    [Op.gte]: new Date(),
-                },
-            },
-            order: [['date'], ['start']],
-            include: [{
-                model: dbs.Participant.model,
+                    [Op.eq]: date,
+                }
+            } :
+            {
+                date: {
+                    [Op.gte]: new Date(moment().format('yyyy-MM-DD')),
+                }
+            };
 
-            }]
+
+        const meetingList = await this.model.findAll({
+            where: dateCondition,
+            order: [['date'], ['start']],
+            include: [
+                {
+                    model: dbs.Participant.model,
+                    where: userCondition
+
+                }
+            ]
         })
         return meetingList
-
 
     }
 
@@ -154,8 +164,7 @@ class MeetingModel extends Model {
             } catch (e: any) {
                 throw new Error(e.message)
             }
-        }
-        else {
+        } else {
             throw new Error('이미 등록된 예약이 있습니다.')
         }
 

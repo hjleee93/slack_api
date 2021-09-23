@@ -62,6 +62,18 @@ class SlackApi {
         return msgObj;
     }
 
+    meetingDm = async (blocks:any,channel_id: string ) =>{
+        const args = {
+            token: slackConfig.token,
+            channel: channel_id,
+            blocks: JSON.stringify(blocks),
+        };
+
+         await axios.post(url.chat_post_msg, qs.stringify(args));
+
+
+    }
+
     deleteDm = async (deleteList: any[]) => {
 
         // {channel: result.channel_id, ts: result.message_id}
@@ -89,6 +101,12 @@ class SlackApi {
 
     }
 
+    getChannelList = async ()=>{
+        const result = await axios.get('https://slack.com/api/conversations.list',{
+            headers: {Authorization: `Bearer ${slackConfig.token}`}
+        })
+        return result;
+    }
 
     async updateModal(modal: any, view_id: any) {
         const args = {
