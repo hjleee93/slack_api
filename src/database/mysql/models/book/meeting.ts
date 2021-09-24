@@ -133,6 +133,41 @@ class MeetingModel extends Model {
 
     }
 
+    userMeetingList = async (user_id: string) => {
+
+        const meetingList = await this.model.findAll({
+            where: {
+                date: {
+                    [Op.gte]: new Date(moment().format('yyyy-MM-DD')),
+                },
+
+            },
+            order: [['date'], ['start']],
+            include: [
+                {
+                    model: dbs.Participant.model,
+
+                }
+            ]
+        })
+        let userMeetingList:any = [];
+
+        _.forEach(meetingList, (list: any) => {
+            _.forEach(list.participants, (user: any) => {
+                if (user.user_id === user_id) {
+                    userMeetingList.push(list)
+                }
+            })
+
+
+        })
+
+        console.log(userMeetingList)
+
+        return userMeetingList
+
+    }
+
 
     editMeeting = async (data: any, meeting_id: number, user: any, transaction?: Transaction) => {
 

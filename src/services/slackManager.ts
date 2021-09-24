@@ -98,6 +98,7 @@ class SlackManager {
                 ...blockManager.workSection(),
                 blockManager.divider(),
                 ...blockManager.meetingSection(),
+
             ]
             await slackApi.displayHome(user.id, blocks)
 

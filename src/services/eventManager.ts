@@ -13,11 +13,11 @@ class eventManager {
 
     async openHome(user_id: any, list_type?: number) {
         const startTime = await dbs.WorkLog.hasWorkStart(user_id)
-        let meetings = await dbs.Meeting.meetingList()
+        let meetings!:any;
         let meetingList!: any;
         switch (list_type) {
             case eMeetingList.mine:
-                meetings = await dbs.Meeting.meetingList(user_id)
+                meetings = await dbs.Meeting.userMeetingList(user_id)
                 break;
             default:
                 meetings = await dbs.Meeting.meetingList();
@@ -36,7 +36,8 @@ class eventManager {
             // ...blockManager.workSection(),
             // blockManager.divider(),
             ...blockManager.meetingSection(list_type),
-            ...meetingList
+            ...meetingList,
+
         ];
         await slackApi.displayHome(user_id, homeBlock);
     }

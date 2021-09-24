@@ -115,12 +115,22 @@ class BlockManager {
     home = {
         header: () => {
             return {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "FTR",
-                    "emoji": true
-                }
+                "text": "Test Link Buttons",
+                "attachments": [
+                    {
+                        "fallback": "Test link button to file://rtoran_nas01/video",
+                        "actions": [
+                            {
+                                "type": "button",
+                                "name": "file_request_123456",
+                                "text": "Test",
+                                "url": "file://rtoran_nas01/video",
+                                "style": "primary",
+                                "confirm": "Really?"
+                            }
+                        ]
+                    }
+                ]
             }
         },
         workAlarm: (time?: Date) => {
@@ -179,7 +189,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n *참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number == 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n *참석자:* ${_.map(meetingInfo.members, (user: any) => {
                         return ` <@${user.user_id}>`
                     })}`
                 }
@@ -204,7 +214,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number == 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
                         return ` <@${user.user_id}>`
                     })}`
                 }
@@ -229,7 +239,7 @@ class BlockManager {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number === 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
+                    "text": `*안건: ${meetingInfo.title}* \n\`${moment(meetingInfo.date).format('YYYY-MM-DD dddd')} ${moment(meetingInfo.start, 'HH:mm:ss').format('a h:mm')} ~ ${moment(meetingInfo.end, 'HH:mm:ss').format('h:mm')}\`\n*회의실:* ${meetingInfo.room_number == 0 ? '외부 미팅' : meetingInfo.room_number}\n*Details:* ${meetingInfo.description}\n*참석자:* ${_.map(meetingInfo.members, (user: any) => {
                         return ` <@${user.user_id}>`
                     })}`
                 }
@@ -349,6 +359,28 @@ class BlockManager {
                     "emoji": true
                 }
             },
+            // {
+            //     "type": "section",
+            //     "text": {
+            //         "type": "mrkdwn",
+            //         "text": "<file://rtoran_nas01/video> \n :star: \n Doors had too many axe holes, guest in room 237 was far too rowdy, whole place felt stuck in the 1920s."
+            //     },
+            //     // "attachments": [
+            //     //     {
+            //     //         "fallback": "Test link button to file://rtoran_nas01/video",
+            //     //         "actions": [
+            //     //             {
+            //     //                 "type": "button",
+            //     //                 "name": "file_request_123456",
+            //     //                 "text": "Test",
+            //     //                 "url": "file://rtoran_nas01/video",
+            //     //                 "style": "primary",
+            //     //                 "confirm": "Really?"
+            //     //             }
+            //     //         ]
+            //     //     }
+            //     // ]
+            // },
             {
                 "type": "actions",
                 "elements": [
