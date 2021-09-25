@@ -17,7 +17,9 @@ class eventManager {
         let meetingList!: any;
         switch (list_type) {
             case eMeetingList.mine:
-                meetings = await dbs.Meeting.userMeetingList(user_id)
+                const meetingList = await dbs.Participant.userMeetingList(user_id)
+                //@ts-ignore
+                meetings = meetingList.sort((a: any, b: any) => new Date(a.date) - new Date(b.date));
                 break;
             default:
                 meetings = await dbs.Meeting.meetingList();

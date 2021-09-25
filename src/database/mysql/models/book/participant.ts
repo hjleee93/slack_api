@@ -52,16 +52,18 @@ class ParticipantModel extends Model {
             }]
         });
 
+
+        const meetingList: any[] = _.uniqBy(participantList, 'meeting_id');
+
         for (let i = participantList.length - 1; i >= 0; i -= 1) {
-            if (participantList[i].user_id !== participantList[i].meeting.participants[0].user_id) {
-                participantList[i].meeting.participants.push(participantList[i])
-            } else {
-                participantList.splice(i, 1);
-            }
+            _.forEach(meetingList, (list: any) => {
+                if (list.meeting.id === participantList[i].meeting.participants[0].meeting_id && participantList[i].user_id !== user_id) {
+                    list.meeting.participants.push(participantList[i])
+                }
+            })
         }
 
-        return _.map(participantList, (p: any) => {
-
+        return _.map(meetingList, (p: any) => {
             const {meeting} = p;
             return meeting
         })
